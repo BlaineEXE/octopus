@@ -11,15 +11,30 @@ import (
 )
 
 func main() {
+	command := flag.String("command", "", "(required) command to execute on remote hosts")
+	hostGroups := flag.String("host-groups", "",
+		"(required) named host groups on which to execute the command")
+	hostsFile := flag.String("hosts-file", defaultHostsFile, fmt.Sprintf(
+		"file which defines which remote hosts are available for execution (default: %s)", defaultHostsFile))
 	identityFile := flag.String("identity-file", "~/.ssh/id_rsa",
 		"identity file used to authenticate to remote hosts")
-	command := flag.String("command", "", "(required) command to execute on remote hosts")
 	flag.Parse()
 
 	if strings.Trim(*command, " \t") == "" {
 		fmt.Printf("ERROR! '-command' must be specified\n\n")
 		flag.PrintDefaults()
-		os.Exit(1)
+		os.Exit(-1)
+	}
+	if strings.Trim(*hostGroups, " \t") == "" {
+		fmt.Printf("ERROR! '-hosts' must be specified \n\n")
+		flag.PrintDefaults()
+		os.Exit(-1)
+	}
+
+	h := strings.Split(*hostGroups, ",")
+	hostAddrs, err := getAddrsFromHostsFile(h, *hostsFile)
+	if err != nil {
+		log.Fatalf("%v", err)
 	}
 
 	config, err := newCommandConfig(*identityFile)
@@ -27,17 +42,14 @@ func main() {
 		log.Fatalf("could not generate command config: %v", err)
 	}
 
-	hosts := []string{"10.86.1.87", "10.86.1.103"}
-	tentacles := make(chan tentacle, len(hosts))
-
-	for i := 0; i < len(hosts); i++ {
-		go runCommand(hosts[i], *command, config, tentacles)
+	tch := make(chan tentacle, len(hostAddrs))
+	for i := 0; i < len(hostAddrs); i++ {
+		go runCommand(hostAddrs[i], *command, config, tch)
 	}
 
 	numErrors := 0
-
-	for range hosts {
-		t := <-tentacles
+	for range hostAddrs {
+		t := <-tch
 		err := t.print()
 		if err != nil {
 			numErrors++
