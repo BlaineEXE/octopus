@@ -3,21 +3,12 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 )
-
-// Each of octopus's tentacles is a remote connection to a host executing the command
-type tentacle struct {
-	host     string
-	hostname string
-	stdout   *bytes.Buffer
-	err      error
-}
 
 func main() {
 	identityFile := flag.String("identity-file", "~/.ssh/id_rsa",
@@ -54,18 +45,4 @@ func main() {
 	}
 
 	os.Exit(numErrors)
-}
-
-func (t *tentacle) print() error {
-	fmt.Println("-----")
-	fmt.Println(t.hostname)
-	fmt.Printf("-----\n\n")
-	o := strings.TrimRight(t.stdout.String(), "\n")
-	if o != "" {
-		fmt.Printf("%s\n\n", o)
-	}
-	if t.err != nil {
-		fmt.Printf("Error: %v", t.err)
-	}
-	return t.err
 }
