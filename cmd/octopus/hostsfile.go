@@ -52,7 +52,7 @@ func getAllGroupsInFile(f *os.File) (map[string]bool, error) {
 	fileGroups := map[string]bool{}
 	// Regex to match Bash variable definition of a host group. Matches: <varname>="
 	// <varname> can be any bash variable; the double quote is required
-	varRegex, _ := regexp.Compile("^([a-zA-Z_][a-zA-Z0-9_]+)=\"")
+	varRegex, _ := regexp.Compile("^([a-zA-Z_][a-zA-Z0-9_]+)=[\"']")
 	for scanner.Scan() {
 		l := strings.TrimLeft(scanner.Text(), " \t")
 		if m := varRegex.FindStringSubmatch(l); m != nil {
