@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# The host groups file is intended to be able to be used by Bash scripts in addition to Octopus. In
+# fact, Octopus will not be able to parse the host groups file if the group entries are not in a Bash
+# variable declaration.
+
+# A sample list of host groups for a theoretical Kubernetes cluster is shown below. In this
+# example, the internal cluster network is 172.24.0.0/16, and the internet-facing (public) network
+# is 192.168.0.0/16
+
+# In this example, the primary place to run Octopus is from the admin node
+admin="172.24.1.1"
+# We may also run it from a laptop, but we will be limited to executing on public nodes
+admin_public="192.168.101.1"
+
+# Definitions must begin with (including either a single- or double-quote): <variable_name>=["']
+masters="172.24.2.1 172.24.2.2 172.24.2.3"
+masters_public="192.168.102.1 192.168.102.2 192.168.102.3"
+
+# Definitions do not need to be on a single line as long as there is a quote following the equal
+nodes='
+172.24.3.1
+172.24.3.2
+172.24.3.3
+172.24.3.4
+172.24.3.5'
+# nodes do not have an internet-facing network in this example
+
+# Deinitions may include previous definitions as variables just as one could do in Bash
+all="${admin} ${masters} ${nodes}"
+all_public="${admin_public} ${masters_public}"
+
+k8s="${masters} ${nodes}"
+
+
+# Examples of using Octopus with this host groups file. We will assume that the file is named the
+# default value of "_node-list".
+#
+#   List all disks on nodes:
+#     octopus -host-groups nodes -command 'ls /dev/sd*'
+#
+#   Get the date from the admin and the nodes:
+#     octopus -host-groups admin,nodes -command 'date'
+#
+#   Get the iptables status on all public-facing nodes:
+#     octopus -host-groups all_public -command 'systemctl status iptables'

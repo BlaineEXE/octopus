@@ -1,5 +1,7 @@
 // Package octopus is a commandline tool for running the same command on multiple remote hosts in
 // parallel.
+//
+// See config for a sample host groups file
 package main
 
 import (
@@ -13,9 +15,9 @@ import (
 func main() {
 	command := flag.String("command", "", "(required) command to execute on remote hosts")
 	hostGroups := flag.String("host-groups", "",
-		"(required) named host groups on which to execute the command")
+		"(required) comma-separated list of host groups on which to execute the command")
 	hostsFile := flag.String("hosts-file", defaultHostsFile, fmt.Sprintf(
-		"file which defines which remote hosts are available for execution (default: %s)", defaultHostsFile))
+		"file which defines which groups of remote hosts are available for execution (default: %s)", defaultHostsFile))
 	identityFile := flag.String("identity-file", "~/.ssh/id_rsa",
 		"identity file used to authenticate to remote hosts")
 	flag.Parse()
