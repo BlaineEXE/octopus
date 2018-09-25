@@ -16,14 +16,8 @@ Octopus is actually a Bash file with groups defined by variable definitions. A f
 host groups as Bash variables was chosen so that so that the same file may be used easily by both
 Octopus and by user-made scripts.
 
-Under the hood, Octopus uses `ssh` connections, and some `ssh` arguments are reflected in Octopus's
-arguments.
-
-**warning:** Octopus does not do verification of the remote hosts (`StrictHostKeyChecking=no`), and
-it does not add entries to the user's known hosts file.
-
 Usage
 -------
-See `octopus -help` for command usage.
+See `octopus [--help|-h]` for command usage.
 
 An example host groups file can be found in the [config](config) directory.
