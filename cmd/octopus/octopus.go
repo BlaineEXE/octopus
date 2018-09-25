@@ -17,7 +17,7 @@ func (o *octopus) Run() (numHostErrors int, err error) {
 
 	g := strings.Split(o.hostGroups, ",")
 	Info.Println("host groups: ", g)
-	hostAddrs, err := getAddrsFromHostsFile(g, o.groupsFile)
+	hostAddrs, err := getAddrsFromGroupsFile(g, o.groupsFile)
 	if err != nil {
 		return -1, err
 	}

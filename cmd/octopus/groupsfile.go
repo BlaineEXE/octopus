@@ -13,36 +13,36 @@ const (
 	defaultGroupsFile = "_node-list"
 )
 
-func getAddrsFromHostsFile(hostGroups []string, hostsFile string) ([]string, error) {
-	Info.Println("groups file: ", hostsFile)
+func getAddrsFromGroupsFile(hostGroups []string, groupsFile string) ([]string, error) {
+	Info.Println("groups file: ", groupsFile)
 
-	f, err := os.Open(hostsFile)
+	f, err := os.Open(groupsFile)
 	if err != nil {
-		return []string{}, fmt.Errorf("could not load hosts file %s: %v", hostsFile, err)
+		return []string{}, fmt.Errorf("could not load hosts file %s: %v", groupsFile, err)
 	}
 
 	fileGroups, err := getAllGroupsInFile(f)
 	if err != nil {
-		return []string{}, fmt.Errorf("error parsing hosts file %s: %v", hostsFile, err)
+		return []string{}, fmt.Errorf("error parsing hosts file %s: %v", groupsFile, err)
 	}
 
 	// Make a '${<group>}' argument for each group
 	gVars := []string{}
 	for _, g := range hostGroups {
 		if _, ok := fileGroups[g]; !ok {
-			return []string{}, fmt.Errorf("host group %s not found in hosts file %s", g, hostsFile)
+			return []string{}, fmt.Errorf("host group %s not found in hosts file %s", g, groupsFile)
 		}
 		gVars = append(gVars, fmt.Sprintf("${%s}", g))
 	}
 
 	// Source the hosts file, and echo all the groups without newlines
 	cmd := exec.Command("/bin/bash", "-c",
-		fmt.Sprintf("source %s ; echo %s", hostsFile, strings.Join(gVars, " ")))
+		fmt.Sprintf("source %s ; echo %s", groupsFile, strings.Join(gVars, " ")))
 	o, err := cmd.CombinedOutput()
 	// convert to string which has exactly one newline
 	os := strings.TrimRight(string(o), "\n")
 	if err != nil {
-		return []string{}, fmt.Errorf("could not get groups %v from %s: %v\n%s", hostGroups, hostsFile, err, os)
+		return []string{}, fmt.Errorf("could not get groups %v from %s: %v\n%s", hostGroups, groupsFile, err, os)
 	}
 
 	addrs := strings.Split(os, " ")
