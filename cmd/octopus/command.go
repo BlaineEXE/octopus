@@ -10,6 +10,8 @@ import (
 )
 
 func newCommandConfig(identityFile string) (*ssh.ClientConfig, error) {
+	Info.Println("identity file: ", identityFile)
+
 	key, err := ioutil.ReadFile(identityFile)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read private key: %v", err)
@@ -41,6 +43,7 @@ func runCommand(host, command string, config *ssh.ClientConfig, out chan<- tenta
 	}
 	defer func() { out <- t }()
 
+	Info.Println("dialing host: ", host)
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", host), config)
 	if err != nil {
 		t.err = fmt.Errorf("%v: %v", t.err, err)
@@ -48,6 +51,7 @@ func runCommand(host, command string, config *ssh.ClientConfig, out chan<- tenta
 	}
 
 	// Get the host's hostname for easier identification
+	Info.Println("running hostname command on host: ", host)
 	hch := make(chan string)
 	go func() {
 		b := new(bytes.Buffer)
@@ -61,6 +65,7 @@ func runCommand(host, command string, config *ssh.ClientConfig, out chan<- tenta
 		close(hch)
 	}()
 
+	Info.Println("running user command on host: ", host)
 	t.err = doRunCommand(command, client, t.stdout)
 	if t.err != nil {
 		t.err = fmt.Errorf("%s: %v", runFailedText, t.err)

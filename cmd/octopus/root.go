@@ -28,6 +28,10 @@ var octopusCmd = &cobra.Command{
 	// Support exactly one arg, which is the command
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		if verbose {
+			Info.SetOutput(os.Stderr)
+		}
+
 		o := octopus{
 			command:      args[0],
 			hostGroups:   hostGroups,
@@ -46,6 +50,7 @@ var octopusCmd = &cobra.Command{
 // Arguments
 var (
 	command, hostGroups, groupsFile, identityFile string
+	verbose                                       bool
 )
 
 func init() {
@@ -60,6 +65,9 @@ func init() {
 
 	octopusCmd.PersistentFlags().StringVarP(&identityFile, "identity-file", "i", "$HOME/.ssh/id_rsa",
 		"file from which the identity (private key) for public key authentication is read")
+
+	octopusCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false,
+		"print additional information about octopus progress")
 }
 
 func getAbsFilePath(path string) string {

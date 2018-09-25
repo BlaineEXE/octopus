@@ -13,7 +13,10 @@ type octopus struct {
 }
 
 func (o *octopus) Run() (numHostErrors int, err error) {
+	Info.Println("user command:\n", o.command)
+
 	g := strings.Split(o.hostGroups, ",")
+	Info.Println("host groups: ", g)
 	hostAddrs, err := getAddrsFromHostsFile(g, o.groupsFile)
 	if err != nil {
 		return -1, err

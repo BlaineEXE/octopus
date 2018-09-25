@@ -14,6 +14,8 @@ const (
 )
 
 func getAddrsFromHostsFile(hostGroups []string, hostsFile string) ([]string, error) {
+	Info.Println("groups file: ", hostsFile)
+
 	f, err := os.Open(hostsFile)
 	if err != nil {
 		return []string{}, fmt.Errorf("could not load hosts file %s: %v", hostsFile, err)
