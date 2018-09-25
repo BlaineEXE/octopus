@@ -1,46 +1,41 @@
-// Package octopus is a commandline tool for running the same command on multiple remote hosts in
-// parallel.
-//
-// See config for a sample host groups file
 package main
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"strings"
 )
 
-func main() {
-	if err := octopusCmd.Execute(); err != nil {
-		log.Fatalf("%v", err)
-	}
-	fmt.Println(groupsFile)
+type octopus struct {
+	command      string
+	hostGroups   string
+	groupsFile   string
+	identityFile string
+}
 
-	g := strings.Split(hostGroups, ",")
-	hostAddrs, err := getAddrsFromHostsFile(g, groupsFile)
+func (o *octopus) Run() (numHostErrors int, err error) {
+	g := strings.Split(o.hostGroups, ",")
+	hostAddrs, err := getAddrsFromHostsFile(g, o.groupsFile)
 	if err != nil {
-		log.Fatalf("%v", err)
+		return -1, err
 	}
 
-	config, err := newCommandConfig(identityFile)
+	config, err := newCommandConfig(o.identityFile)
 	if err != nil {
-		log.Fatalf("could not generate command config: %v", err)
+		return -1, fmt.Errorf("could not generate command config: %v", err)
 	}
 
 	tch := make(chan tentacle, len(hostAddrs))
 	for i := 0; i < len(hostAddrs); i++ {
-		go runCommand(hostAddrs[i], command, config, tch)
+		go runCommand(hostAddrs[i], o.command, config, tch)
 	}
 
-	numErrors := 0
+	numHostErrors = 0
 	for range hostAddrs {
 		t := <-tch
 		err := t.print()
 		if err != nil {
-			numErrors++
+			numHostErrors++
 		}
 	}
-
-	os.Exit(numErrors)
+	return numHostErrors, nil
 }

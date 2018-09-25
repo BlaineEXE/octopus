@@ -28,11 +28,18 @@ var octopusCmd = &cobra.Command{
 	// Support exactly one arg, which is the command
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		command = args[0]
+		o := octopus{
+			command:      args[0],
+			hostGroups:   hostGroups,
+			groupsFile:   getAbsFilePath(groupsFile),
+			identityFile: getAbsFilePath(identityFile),
+		}
 
-		// Expand the file path to the abs path for all file arguments
-		groupsFile = getAbsFilePath(groupsFile)
-		identityFile = getAbsFilePath(identityFile)
+		numErrs, err := o.Run()
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+		os.Exit(numErrs)
 	},
 }
 
