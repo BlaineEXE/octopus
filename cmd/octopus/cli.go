@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -28,6 +29,10 @@ var octopusCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		command = args[0]
+
+		// Expand the file path to the abs path for all file arguments
+		groupsFile = getAbsFilePath(groupsFile)
+		identityFile = getAbsFilePath(identityFile)
 	},
 }
 
@@ -46,6 +51,11 @@ func init() {
 	octopusCmd.PersistentFlags().StringVarP(&groupsFile, "groups-file", "f", defaultGroupsFile,
 		"file which defines groups of remote hosts available for execution")
 
-	octopusCmd.PersistentFlags().StringVarP(&identityFile, "identity-file", "i", "~/.ssh/id_rsa",
+	octopusCmd.PersistentFlags().StringVarP(&identityFile, "identity-file", "i", "$HOME/.ssh/id_rsa",
 		"file from which the identity (private key) for public key authentication is read")
+}
+
+func getAbsFilePath(path string) string {
+	// This can expand '$HOME' to '/home/username' but cannot expand '~' to '/home/username'
+	return os.ExpandEnv(path)
 }
