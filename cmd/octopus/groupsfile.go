@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	defaultHostsFile = "_node-list"
+	defaultGroupsFile = "_node-list"
 )
 
 func getAddrsFromHostsFile(hostGroups []string, hostsFile string) ([]string, error) {
