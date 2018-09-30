@@ -16,8 +16,7 @@ var (
 )
 
 func main() {
-	// Don't output info messages by default
-	Info = log.New(ioutil.Discard, "INFO: ", 0)
+	Info = log.New(ioutil.Discard, "INFO: ", 0) // Don't output info messages by default
 
 	if err := octopusCmd.Execute(); err != nil {
 		log.Fatalf("%v", err)

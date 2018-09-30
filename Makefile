@@ -7,10 +7,10 @@ dep:
 	dep ensure
 
 build: dep
-	go build \
-			$(BUILD_OPTS) \
-			-o $(OUTPUT_DIR)/octopus \
-		$(SRC_ROOT)/...
+	go build $(BUILD_OPTS) \
+	         -o $(OUTPUT_DIR)/octopus \
+	  $(SRC_ROOT)/...
+	@ echo "Binary size: $$(ls -sh $(OUTPUT_DIR)/octopus | cut -d' ' -f 1)"
 
 install: dep
 	go install $(BUILD_OPTS) $(SRC_ROOT)/...

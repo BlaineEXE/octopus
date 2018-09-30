@@ -1,0 +1,7 @@
+# Examaple config.yaml file for octopus.
+# This example does not reflect octopus's default values.
+
+groups-file: $HOME/host-groups.sh
+identity-file: ~/.ssh/id_dsa
+host-groups: all
+verbose: false
