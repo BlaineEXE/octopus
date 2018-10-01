@@ -6,19 +6,23 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
+
+	"github.com/BlaineEXE/octopus/cmd/octopus/config"
+	"github.com/BlaineEXE/octopus/cmd/octopus/run"
+	"github.com/BlaineEXE/octopus/cmd/octopus/version"
 )
 
-var (
-	// Info is the logger used for debug printing
-	Info *log.Logger
-)
+func init() {
+	octopusCmd := config.OctopusCmd
+
+	// Subcommands
+	octopusCmd.AddCommand(version.VersionCmd)
+	octopusCmd.AddCommand(run.RunCmd)
+}
 
 func main() {
-	Info = log.New(ioutil.Discard, "INFO: ", 0) // Don't output info messages by default
-
-	if err := octopusCmd.Execute(); err != nil {
+	if err := config.OctopusCmd.Execute(); err != nil {
 		log.Fatalf("%v", err)
 	}
 	fmt.Println("")

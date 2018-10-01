@@ -1,4 +1,4 @@
-package main
+package octopus
 
 import (
 	"bufio"
@@ -7,14 +7,12 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
-)
 
-const (
-	defaultGroupsFile = "_node-list"
+	"github.com/BlaineEXE/octopus/internal/logger"
 )
 
 func getAddrsFromGroupsFile(hostGroups []string, groupsFile string) ([]string, error) {
-	Info.Println("groups file: ", groupsFile)
+	logger.Info.Println("groups file: ", groupsFile)
 
 	f, err := os.Open(groupsFile)
 	if err != nil {

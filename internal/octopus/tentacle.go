@@ -1,4 +1,4 @@
-package main
+package octopus
 
 import (
 	"bytes"
