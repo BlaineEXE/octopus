@@ -22,7 +22,7 @@ func (t *tentacle) print() error {
 		fmt.Printf("%s\n\n", o)
 	}
 	if t.err != nil {
-		fmt.Printf("Error: %v\n\n", t.err)
+		fmt.Printf("Error: %+v\n\n", t.err)
 	}
 	return t.err
 }

@@ -32,7 +32,7 @@ var RunCmd = &cobra.Command{
 
 		numErrs, err := o.Run(args[0])
 		if err != nil {
-			return fmt.Errorf("octopus run command failure: %v", err)
+			return fmt.Errorf("octopus run command failure: %+v", err)
 		}
 		os.Exit(numErrs)
 		return nil

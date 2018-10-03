@@ -23,7 +23,7 @@ func init() {
 
 func main() {
 	if err := config.OctopusCmd.Execute(); err != nil {
-		log.Fatalf("%v", err)
+		log.Fatalf("%+v", err)
 	}
 	fmt.Println("")
 }

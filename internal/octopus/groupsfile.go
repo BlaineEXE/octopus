@@ -16,12 +16,12 @@ func getAddrsFromGroupsFile(hostGroups []string, groupsFile string) ([]string, e
 
 	f, err := os.Open(groupsFile)
 	if err != nil {
-		return []string{}, fmt.Errorf("could not load hosts file %s: %v", groupsFile, err)
+		return []string{}, fmt.Errorf("could not load hosts file %s: %+v", groupsFile, err)
 	}
 
 	fileGroups, err := getAllGroupsInFile(f)
 	if err != nil {
-		return []string{}, fmt.Errorf("error parsing hosts file %s: %v", groupsFile, err)
+		return []string{}, fmt.Errorf("error parsing hosts file %s: %+v", groupsFile, err)
 	}
 
 	// Make a '${<group>}' argument for each group
@@ -40,7 +40,7 @@ func getAddrsFromGroupsFile(hostGroups []string, groupsFile string) ([]string, e
 	// convert to string which has exactly one newline
 	os := strings.TrimRight(string(o), "\n")
 	if err != nil {
-		return []string{}, fmt.Errorf("could not get groups %v from %s: %v\n%s", hostGroups, groupsFile, err, os)
+		return []string{}, fmt.Errorf("could not get groups %+v from %s: %+v\n%s", hostGroups, groupsFile, err, os)
 	}
 
 	addrs := strings.Split(os, " ")

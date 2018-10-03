@@ -16,7 +16,7 @@ func loadConfig() {
 	viper.AddConfigPath("/etc/octopus/")
 	err := viper.ReadInConfig()
 	if err != nil && !isConfigFileNotFoundError(err) {
-		log.Fatalf("Error reading config file: %v", err)
+		log.Fatalf("Error reading config file: %+v", err)
 	}
 }
 

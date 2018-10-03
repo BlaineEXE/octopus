@@ -15,12 +15,12 @@ func newCommandConfig(identityFile string) (*ssh.ClientConfig, error) {
 
 	key, err := ioutil.ReadFile(identityFile)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read private key: %v", err)
+		return nil, fmt.Errorf("unable to read private key: %+v", err)
 	}
 
 	signer, err := ssh.ParsePrivateKey(key)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse private key: %v", err)
+		return nil, fmt.Errorf("unable to parse private key: %+v", err)
 	}
 
 	config := &ssh.ClientConfig{
@@ -47,7 +47,7 @@ func runCommand(host, command string, config *ssh.ClientConfig, out chan<- tenta
 	logger.Info.Println("dialing host: ", host)
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", host), config)
 	if err != nil {
-		t.err = fmt.Errorf("%v: %v", t.err, err)
+		t.err = fmt.Errorf("%+v: %+v", t.err, err)
 		return
 	}
 
@@ -69,7 +69,7 @@ func runCommand(host, command string, config *ssh.ClientConfig, out chan<- tenta
 	logger.Info.Println("running user command on host: ", host)
 	t.err = doRunCommand(command, client, t.stdout)
 	if t.err != nil {
-		t.err = fmt.Errorf("%s: %v", runFailedText, t.err)
+		t.err = fmt.Errorf("%s: %+v", runFailedText, t.err)
 	}
 
 	t.hostname = <-hch
@@ -89,7 +89,7 @@ func doRunCommand(command string, client *ssh.Client, stdoutBuffer *bytes.Buffer
 
 	err = session.Run(command)
 	if err != nil {
-		return fmt.Errorf("%v:\n\n%s", err, strings.TrimRight(stderr.String(), "\n"))
+		return fmt.Errorf("%+v:\n\n%s", err, strings.TrimRight(stderr.String(), "\n"))
 	}
 	return err
 }

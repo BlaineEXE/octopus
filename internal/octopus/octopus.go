@@ -41,7 +41,7 @@ func (o *Octopus) Run(command string) (numHostErrors int, err error) {
 
 	config, err := newCommandConfig(o.IdentityFile)
 	if err != nil {
-		return -1, fmt.Errorf("could not generate command config: %v", err)
+		return -1, fmt.Errorf("could not generate command config: %+v", err)
 	}
 
 	tch := make(chan tentacle, len(hostAddrs))
@@ -64,7 +64,7 @@ func (o *Octopus) Run(command string) (numHostErrors int, err error) {
 func Marshal(octopus *Octopus) (string, error) {
 	j, err := json.Marshal(octopus)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal the octopus %v to a string: %v", octopus, err)
+		return "", fmt.Errorf("failed to marshal the octopus %+v to a string: %+v", octopus, err)
 	}
 	return string(j), nil
 }
@@ -74,7 +74,7 @@ func Unmarshal(marshalledOctopus string) (*Octopus, error) {
 	var o Octopus
 	m := []byte(marshalledOctopus)
 	if err := json.Unmarshal(m, &o); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal the string %v to an octopus: %v", marshalledOctopus, err)
+		return nil, fmt.Errorf("failed to unmarshal the string %+v to an octopus: %+v", marshalledOctopus, err)
 	}
 	return &o, nil
 }

@@ -44,12 +44,12 @@ func TrainOctopus() *octopus.Octopus {
 func getAbsFilePath(path string) string {
 	p, err := homedir.Expand(path) // can expand '~' but can't expand '$HOME'
 	if err != nil {
-		log.Fatalf("Error parsing path %s: %v", path, err)
+		log.Fatalf("Error parsing path %s: %+v", path, err)
 	}
 	p = os.ExpandEnv(p) // can expand '$HOME' but cannot expand '~'
 	a, err := filepath.Abs(p)
 	if err != nil {
-		log.Fatalf("Could not get absolute path for %s: %v", path, err)
+		log.Fatalf("Could not get absolute path for %s: %+v", path, err)
 	}
 	return a
 }
