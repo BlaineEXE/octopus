@@ -3,11 +3,11 @@
 package octopus
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/BlaineEXE/octopus/internal/logger"
+	"github.com/BlaineEXE/octopus/internal/tentacle"
 )
 
 // Octopus is a metaphorical octopus which can run commands on remote hosts in parallel with its
@@ -28,9 +28,16 @@ func New(HostGroups, GroupsFile, IdentityFile string) *Octopus {
 	}
 }
 
-// Run politely asks the octopus to run a command.
-func (o *Octopus) Run(command string) (numHostErrors int, err error) {
-	logger.Info.Println("user command:\n", command)
+// RunCommand politely asks the octopus to run a command.
+func (o *Octopus) RunCommand(command string) (numHostErrors int, err error) {
+	r := &tentacle.Command{
+		Command: command,
+	}
+	return o.exec(r)
+}
+
+func (o *Octopus) exec(tntcl tentacle.Tentacle) (numHostErrors int, err error) {
+	logger.Info.Println("TODO: MORE PRINT INFO HERE")
 
 	g := strings.Split(o.HostGroups, ",")
 	logger.Info.Println("host groups: ", g)
@@ -39,42 +46,27 @@ func (o *Octopus) Run(command string) (numHostErrors int, err error) {
 		return -1, err
 	}
 
-	config, err := newCommandConfig(o.IdentityFile)
+	config, err := newClientConfig(o.IdentityFile)
 	if err != nil {
-		return -1, fmt.Errorf("could not generate command config: %+v", err)
+		return -1, fmt.Errorf("could not generate ssh client config: %+v", err)
 	}
 
-	tch := make(chan tentacle, len(hostAddrs))
+	rch := make(chan tentacle.Result, len(hostAddrs))
 	for i := 0; i < len(hostAddrs); i++ {
-		go runCommand(hostAddrs[i], command, config, tch)
+		tgt := &tentacle.Target{
+			Host:         hostAddrs[i],
+			ClientConfig: config,
+		}
+		go tntcl.Do(tgt, rch)
 	}
 
 	numHostErrors = 0
 	for range hostAddrs {
-		t := <-tch
-		err := t.print()
-		if err != nil {
+		r := <-rch
+		r.Print()
+		if r.Err != nil {
 			numHostErrors++
 		}
 	}
 	return numHostErrors, nil
-}
-
-// Marshal marshalls the octopus to a string.
-func Marshal(octopus *Octopus) (string, error) {
-	j, err := json.Marshal(octopus)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal the octopus %+v to a string: %+v", octopus, err)
-	}
-	return string(j), nil
-}
-
-// Unmarshal unmarshalls the string to an octopus.
-func Unmarshal(marshalledOctopus string) (*Octopus, error) {
-	var o Octopus
-	m := []byte(marshalledOctopus)
-	if err := json.Unmarshal(m, &o); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal the string %+v to an octopus: %+v", marshalledOctopus, err)
-	}
-	return &o, nil
 }

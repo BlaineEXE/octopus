@@ -30,7 +30,7 @@ var RunCmd = &cobra.Command{
 
 		o := config.TrainOctopus()
 
-		numErrs, err := o.Run(args[0])
+		numErrs, err := o.RunCommand(args[0])
 		if err != nil {
 			return fmt.Errorf("octopus run command failure: %+v", err)
 		}
