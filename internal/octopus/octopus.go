@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/BlaineEXE/octopus/internal/action"
 	"github.com/BlaineEXE/octopus/internal/logger"
 	"github.com/BlaineEXE/octopus/internal/tentacle"
 )
@@ -30,13 +31,22 @@ func New(HostGroups, GroupsFile, IdentityFile string) *Octopus {
 
 // RunCommand politely asks the octopus to run a command.
 func (o *Octopus) RunCommand(command string) (numHostErrors int, err error) {
-	r := &tentacle.Command{
+	c := &action.RunCommand{
 		Command: command,
 	}
-	return o.exec(r)
+	return o.exec(c)
 }
 
-func (o *Octopus) exec(tntcl tentacle.Tentacle) (numHostErrors int, err error) {
+// CopyFiles prays, "I beg thee Sir Octopus, wilst thou copy these files yonder?"
+func (o *Octopus) CopyFiles(localSources []string, remoteDest string) (numHostErrors int, err error) {
+	c := &action.CopyFiles{
+		LocalSources: localSources,
+		RemoteDir:    remoteDest,
+	}
+	return o.exec(c)
+}
+
+func (o *Octopus) exec(action action.Doer) (numHostErrors int, err error) {
 	logger.Info.Println("TODO: MORE PRINT INFO HERE")
 
 	g := strings.Split(o.HostGroups, ",")
@@ -53,11 +63,12 @@ func (o *Octopus) exec(tntcl tentacle.Tentacle) (numHostErrors int, err error) {
 
 	rch := make(chan tentacle.Result, len(hostAddrs))
 	for i := 0; i < len(hostAddrs); i++ {
-		tgt := &tentacle.Target{
+		tntcl := &tentacle.Tentacle{
 			Host:         hostAddrs[i],
+			Action:       action,
 			ClientConfig: config,
 		}
-		go tntcl.Do(tgt, rch)
+		go tntcl.Go(rch)
 	}
 
 	numHostErrors = 0
