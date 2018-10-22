@@ -29,7 +29,7 @@ func New(HostGroups, GroupsFile, IdentityFile string) *Octopus {
 	}
 }
 
-// RunCommand politely asks the octopus to run a command.
+// RunCommand requests that the octopus run a command on remote hosts.
 func (o *Octopus) RunCommand(command string) (numHostErrors int, err error) {
 	c := &action.RunCommand{
 		Command: command,
@@ -37,7 +37,7 @@ func (o *Octopus) RunCommand(command string) (numHostErrors int, err error) {
 	return o.exec(c)
 }
 
-// CopyFiles prays, "I beg thee Sir Octopus, wilst thou copy these files yonder?"
+// CopyFiles requests that the octopus copies local file(s) to remote hosts at a remote dir.
 func (o *Octopus) CopyFiles(localSources []string, remoteDest string) (numHostErrors int, err error) {
 	c := &action.CopyFiles{
 		LocalSources: localSources,
