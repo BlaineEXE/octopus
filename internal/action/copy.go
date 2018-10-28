@@ -116,6 +116,12 @@ func copyFileWorker(id string, client *sftp.Client, jobs <-chan copyJob, results
 }
 
 func doCopyFile(client *sftp.Client, sourcePath, destDir string) error {
+	s, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("could not open local file %s for reading: %+v", sourcePath, err)
+	}
+	defer s.Close()
+
 	filename := filepath.Base(sourcePath)
 	destPath := filepath.Join(destDir, filename)
 	d, err := client.Create(destPath)
@@ -123,12 +129,6 @@ func doCopyFile(client *sftp.Client, sourcePath, destDir string) error {
 		return fmt.Errorf("could not open remote file %s for writing: %+v", destPath, err)
 	}
 	defer d.Close()
-
-	s, err := os.Open(sourcePath)
-	if err != nil {
-		return fmt.Errorf("could not open local file %s for reading: %+v", sourcePath, err)
-	}
-	defer s.Close()
 
 	if _, err := d.WriteTo(s); err != nil {
 		return fmt.Errorf("failed to copy file %s to remote at %s: %+v", sourcePath, destPath, err)

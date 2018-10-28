@@ -28,6 +28,7 @@ type Result struct {
 	Err      error
 }
 
+// Go sends out a tentacle to start a new remote connection and do the action on the remote host.
 func (t *Tentacle) Go(out chan<- Result) {
 	result := Result{
 		// fallback hostname includes the raw host (e.g., IP) for some ability to identify the host
@@ -74,9 +75,9 @@ func (t *Tentacle) Go(out chan<- Result) {
 // Print outputs a tentacle result in a nice human readable format, printing main output to stdout
 // and error output to stderr.
 func (r *Result) Print() {
-	fmt.Printf("-----\n")
-	fmt.Printf("%s\n", r.Hostname)
-	fmt.Printf("-----\n\n")
+	fmt.Printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+	fmt.Printf(" %s\n", r.Hostname)
+	fmt.Printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n")
 	// if buffer is nil, (*bytes.Buffer).String() returns "<nil>"; do not print this
 	o := strings.TrimRight(r.Data.Stdout.String(), "\n")
 	if r.Data.Stdout != nil && o != "" {
