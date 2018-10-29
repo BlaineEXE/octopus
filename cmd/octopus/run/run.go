@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/BlaineEXE/octopus/internal/action"
+
 	"github.com/spf13/cobra"
 
 	"github.com/BlaineEXE/octopus/cmd/octopus/config"
@@ -30,7 +32,10 @@ var RunCmd = &cobra.Command{
 
 		o := config.TrainOctopus()
 
-		numErrs, err := o.RunCommand(args[0])
+		c := &action.CommandRunner{
+			Command: args[0],
+		}
+		numErrs, err := o.Do(c)
 		if err != nil {
 			return fmt.Errorf("octopus run command failure: %+v", err)
 		}

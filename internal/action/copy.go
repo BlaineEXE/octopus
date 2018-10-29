@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/BlaineEXE/octopus/internal/logger"
+	"github.com/BlaineEXE/octopus/internal/util"
 
 	"github.com/pkg/sftp"
 )
@@ -21,19 +23,15 @@ const (
 // The default file limit is 1024. Don't stress the system too much.
 var filePointers = make(chan struct{}, maxFilePointers)
 
-// CopyFiles is a tentacle action which copies local files to a remote host.
-type CopyFiles struct {
+// FileCopier is a tentacle action which copies local files to a remote host.
+type FileCopier struct {
 	LocalSources []string
 	RemoteDir    string
+	Recursive    bool
 }
 
 // Do executes the command tentacle's command on the remote host.
-func (c *CopyFiles) Do(context *Context) (*Data, error) {
-	data := &Data{
-		Stdout: new(bytes.Buffer),
-		Stderr: new(bytes.Buffer),
-	}
-
+func (c *FileCopier) Do(context *Context) (*Data, error) {
 	logger.Info.Println("establishing sftp connection to host:", context.Host)
 	sftp, err := sftp.NewClient(context.Client)
 	if err != nil {
@@ -41,73 +39,135 @@ func (c *CopyFiles) Do(context *Context) (*Data, error) {
 	}
 	defer sftp.Close()
 
-	resCh := make(chan copyResult, maxFilePointers)
+	if err := createRemoteDir(sftp, c.RemoteDir); err != nil {
+		return nil, err
+	}
 
-	go func() {
-		for _, s := range c.LocalSources {
-			go func(s string) {
-				err := doCopyFile(sftp, s, c.RemoteDir)
-				resCh <- copyResult{s, err}
-			}(s)
+	errCh := make(chan error, maxFilePointers)
+	var wg sync.WaitGroup
+
+	for _, s := range c.LocalSources {
+		fp, err := util.AbsPath(s)
+		if err != nil {
+			return nil, fmt.Errorf("cannot start copying files: %+v", err)
 		}
+		wg.Add(1)
+		go doCopyDirOrFile(sftp, fp, c.RemoteDir, c.Recursive, &wg, errCh)
+	}
+
+	// Close the channel when all files are copied (which could be recursively)
+	go func() {
+		wg.Wait()
+		close(errCh)
 	}()
 
+	data := &Data{
+		Stdout: new(bytes.Buffer),
+		Stderr: new(bytes.Buffer),
+	}
+
 	numFail := 0
-	for range c.LocalSources {
-		r := <-resCh
-		if r.err != nil {
+	for err := range errCh {
+		if err != nil {
 			numFail++
 			// append fail message to stderr
-			data.Stderr.WriteString(fmt.Sprintf("%+v\n", r.err))
+			data.Stderr.WriteString(fmt.Sprintf("%+v\n", err))
 		}
 	}
 
-	data.Stdout.WriteString(fmt.Sprintf("wrote %d of %d files",
-		len(c.LocalSources)-numFail, len(c.LocalSources)))
 	e := error(nil)
 	if numFail > 0 {
-		e = fmt.Errorf("failed to copy %d out of %d files to host %s",
-			numFail, len(c.LocalSources), context.Host)
+		e = fmt.Errorf("failed to copy %d path(s)", numFail)
+	} else {
+		data.Stdout.WriteString("wrote all files")
 	}
 	return data, e
 }
 
-type copyResult struct {
-	localSource string
-	err         error
+func doCopyDirOrFile(
+	client *sftp.Client,
+	sourcePath, destDir string,
+	recursive bool,
+	wg *sync.WaitGroup, errors chan<- error,
+) {
+	defer wg.Done()
+
+	if fi, err := os.Stat(sourcePath); err != nil {
+		errors <- fmt.Errorf("could not get info about source path %s: %+v", sourcePath, err)
+		return
+	} else if fi.IsDir() && !recursive {
+		errors <- fmt.Errorf("skipping local path %s because it is a directory and recursive copy is not enabled", sourcePath)
+		return
+	}
+
+	// This works for a single file or for a dir
+	sourceRoot, _ := filepath.Split(sourcePath)
+	err := filepath.Walk(sourcePath, func(pth string, info os.FileInfo, err error) error {
+		if err != nil {
+			errors <- fmt.Errorf("could not access local dir or file %s: %+v", pth, err)
+			// don't double report this err in 'error walking local dir ...'
+			return filepath.SkipDir
+		}
+
+		relPath := pth[len(sourceRoot):]
+		fullDest := filepath.Join(destDir, relPath)
+		if info.IsDir() {
+			// Source base is a dir, and we want to include this base dir on the host.
+			if err := createRemoteDir(client, fullDest); err != nil {
+				errors <- err
+				// don't double report this err in 'error walking local dir ...'
+				return filepath.SkipDir
+			}
+		} else {
+			wg.Add(1)
+			go doCopyFile(client, pth, fullDest, wg, errors)
+		}
+
+		return nil
+	})
+	if err != nil {
+		errors <- fmt.Errorf("error walking local dir %s: %+v", sourcePath, err)
+	}
 }
 
-func doCopyFile(client *sftp.Client, sourcePath, destDir string) error {
-	filePointers <- struct{}{} // claim a file pointer resource
+func doCopyFile(
+	client *sftp.Client,
+	sourcePath, destPath string,
+	wg *sync.WaitGroup, errors chan<- error,
+) {
+	defer wg.Done()
+
+	filePointers <- struct{}{}        // claim a file pointer resource
+	defer func() { <-filePointers }() // release a file pointer resource on any return
 	s, err := os.Open(sourcePath)
 	if err != nil {
-		return fmt.Errorf("could not open local file %s for reading: %+v", sourcePath, err)
+		errors <- fmt.Errorf("could not open local file %s for reading: %+v", sourcePath, err)
+		return
 	}
-	defer func() {
-		s.Close()
-		<-filePointers // release a file pointer resource
-	}()
+	defer s.Close()
 
-	// Creating dir can panic if using a dir that already exists (e.g., /test, /dev/null), so
-	// check if it already exists to avoid this
-	if err, _ := client.ReadDir(destDir); err == nil {
-		// Dir already exists
-	} else if err := client.MkdirAll(destDir); err != nil {
-		return fmt.Errorf("could not create remote directory %s: %+v", destDir, err)
-	}
-
-	filename := filepath.Base(sourcePath)
-	destPath := filepath.Join(destDir, filename)
 	d, err := client.Create(destPath)
 	if err != nil {
-		return fmt.Errorf("could not open remote file %s for writing: %+v", destPath, err)
+		errors <- fmt.Errorf("could not open remote file %s for writing: %+v", destPath, err)
+		return
 	}
 	defer d.Close()
 
 	if _, err := d.WriteTo(s); err != nil {
-		return fmt.Errorf("failed to copy file %s to remote at %s: %+v", sourcePath, destPath, err)
+		errors <- fmt.Errorf("failed to copy file %s to remote at %s: %+v", sourcePath, destPath, err)
+		return
 	}
+}
 
+func createRemoteDir(client *sftp.Client, dir string) error {
+	if fi, err := client.Stat(dir); err == nil {
+		if !fi.IsDir() {
+			return fmt.Errorf("specified remote dir %s is a file, not a dir; cannot copy files", dir)
+		}
+		// already exists
+	} else if err := client.MkdirAll(dir); err != nil {
+		return fmt.Errorf("could not create remote directory %s: %+v", dir, err)
+	}
 	return nil
 }
 

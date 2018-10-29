@@ -54,7 +54,7 @@ func (t *Tentacle) Go(out chan<- Result) {
 	// get the host's hostname (in parallel) for easier human identification
 	logger.Info.Println("running hostname command on host:", t.Host)
 	hch := make(chan string)
-	hostnameGetter := action.RunCommand{Command: "hostname"}
+	hostnameGetter := action.CommandRunner{Command: "hostname"}
 	go func() {
 		defer close(hch)
 		hData, err := hostnameGetter.Do(context)
@@ -78,14 +78,16 @@ func (r *Result) Print() {
 	fmt.Printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 	fmt.Printf(" %s\n", r.Hostname)
 	fmt.Printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n")
-	// if buffer is nil, (*bytes.Buffer).String() returns "<nil>"; do not print this
-	o := strings.TrimRight(r.Data.Stdout.String(), "\n")
-	if r.Data.Stdout != nil && o != "" {
-		fmt.Printf("%s\n\n", o)
-	}
-	o = strings.TrimRight(r.Data.Stderr.String(), "\n")
-	if r.Data.Stderr != nil && o != "" {
-		fmt.Fprintf(os.Stderr, "Stderr:\n\n%s\n\n", o) // to stderr
+	if r.Data != nil {
+		// if buffer is nil, (*bytes.Buffer).String() returns "<nil>"; do not print this
+		o := strings.TrimRight(r.Data.Stdout.String(), "\n")
+		if r.Data.Stdout != nil && o != "" {
+			fmt.Printf("%s\n\n", o)
+		}
+		o = strings.TrimRight(r.Data.Stderr.String(), "\n")
+		if r.Data.Stderr != nil && o != "" {
+			fmt.Fprintf(os.Stderr, "Stderr:\n\n%s\n\n", o) // to stderr
+		}
 	}
 	if r.Err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %+v\n\n", r.Err) // to stderr

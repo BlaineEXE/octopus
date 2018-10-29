@@ -29,26 +29,10 @@ func New(HostGroups, GroupsFile, IdentityFile string) *Octopus {
 	}
 }
 
-// RunCommand requests that the octopus run a command on remote hosts.
-func (o *Octopus) RunCommand(command string) (numHostErrors int, err error) {
-	c := &action.RunCommand{
-		Command: command,
-	}
-	return o.exec(c)
-}
-
-// CopyFiles requests that the octopus copies local file(s) to remote hosts at a remote dir.
-func (o *Octopus) CopyFiles(localSources []string, remoteDest string) (numHostErrors int, err error) {
-	c := &action.CopyFiles{
-		LocalSources: localSources,
-		RemoteDir:    remoteDest,
-	}
-	return o.exec(c)
-}
-
-func (o *Octopus) exec(action action.Doer) (numHostErrors int, err error) {
-	logger.Info.Println("TODO: MORE PRINT INFO HERE")
-
+// Do sends out tentacles to all hosts in the host group(s) in individual goroutines and collects
+// the results of all the tentacles at the end. Returns the number of hosts that report errors if
+// the tentacles are able to be sent out.
+func (o *Octopus) Do(action action.Doer) (numHostErrors int, err error) {
 	g := strings.Split(o.HostGroups, ",")
 	logger.Info.Println("host groups: ", g)
 	hostAddrs, err := getAddrsFromGroupsFile(g, o.GroupsFile)

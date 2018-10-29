@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/BlaineEXE/octopus/internal/action"
+
+	"github.com/spf13/viper"
+
 	"github.com/spf13/cobra"
 
 	"github.com/BlaineEXE/octopus/cmd/octopus/config"
@@ -29,11 +33,22 @@ var CopyCmd = &cobra.Command{
 
 		o := config.TrainOctopus()
 
-		numErrs, err := o.CopyFiles(localSources, remoteDir)
+		c := &action.FileCopier{
+			LocalSources: localSources,
+			RemoteDir:    remoteDir,
+			Recursive:    viper.GetBool("recursive"),
+		}
+		numErrs, err := o.Do(c)
 		if err != nil {
 			return fmt.Errorf("octopus copy files failure: %+v", err)
 		}
 		os.Exit(numErrs)
 		return nil
 	},
+}
+
+func init() {
+	CopyCmd.Flags().BoolP("recursive", "r", false, "recurse into subdirectories and copy all files")
+
+	viper.BindPFlags(CopyCmd.Flags())
 }

@@ -8,20 +8,20 @@ import (
 	"github.com/BlaineEXE/octopus/internal/logger"
 )
 
-// RunCommand is a tentacle action which executes a command on a remote host.
-type RunCommand struct {
+// CommandRunner is a tentacle action which executes a command on a remote host.
+type CommandRunner struct {
 	Command string
 }
 
 // JobLimit is the command tentacle's limit on the number of command jobs that can be started.
 // As many command tentacles can be started as desired, as there are no shared resource limitations.
-func (r *RunCommand) JobLimit() uint32 {
+func (r *CommandRunner) JobLimit() uint32 {
 	// run command doesn't have any resource limits of its own, so return what is basically infinity
 	return math.MaxUint32
 }
 
 // Do executes the command tentacle's command on the remote host.
-func (r *RunCommand) Do(context *Context) (*Data, error) {
+func (r *CommandRunner) Do(context *Context) (*Data, error) {
 	data := &Data{
 		Stdout: new(bytes.Buffer),
 		Stderr: new(bytes.Buffer),
