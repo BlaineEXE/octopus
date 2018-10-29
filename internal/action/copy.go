@@ -12,11 +12,9 @@ import (
 )
 
 const (
-	// max file pointers defaults to 1024 on my system; set a reasonable default here
+	// max file pointers defaults to 1024 on my system; set a reasonable default here that won't
+	// overwhelm the system.
 	maxFilePointers = 512
-
-	// arbitrarily chosen
-	maxFileCopyWorkers = 64
 )
 
 // Counting semaphore to limit the number of files Octopus will open on the host.
@@ -43,30 +41,14 @@ func (c *CopyFiles) Do(context *Context) (*Data, error) {
 	}
 	defer sftp.Close()
 
-	// Creating dir can panic if using a dir that already exists (e.g., /test, /dev/null), so
-	// check if it already exists to avoid this
-	if err, _ := sftp.ReadDir(c.RemoteDir); err == nil {
-		logger.Info.Println("dir", c.RemoteDir, "already exists on host:", context.Host)
-	} else if err := sftp.MkdirAll(c.RemoteDir); err != nil {
-		logger.Info.Println("creating dir", c.RemoteDir, "on host:", context.Host)
-		return nil, fmt.Errorf("could create directory %s on host %s: %+v", c.RemoteDir, context.Host, err)
-	}
-
-	// Should not start more workers than our max file pointers; would be pointless
-	// Similarly pointless would be starting more workers than we have files to copy
-	jobLimit := min(maxFileCopyWorkers, maxFilePointers, len(c.LocalSources))
-	jobCh := make(chan copyJob, jobLimit)
-	resCh := make(chan jobResult, jobLimit)
-
-	logger.Info.Println("starting", jobLimit, "file-copy workers for host:", context.Host)
-	for i := 1; i <= jobLimit; i++ {
-		id := fmt.Sprintf("%s-%d", context.Host, i)
-		go copyFileWorker(id, sftp, jobCh, resCh)
-	}
+	resCh := make(chan copyResult, maxFilePointers)
 
 	go func() {
-		for _, src := range c.LocalSources {
-			jobCh <- copyJob{localSource: src, remoteDir: c.RemoteDir}
+		for _, s := range c.LocalSources {
+			go func(s string) {
+				err := doCopyFile(sftp, s, c.RemoteDir)
+				resCh <- copyResult{s, err}
+			}(s)
 		}
 	}()
 
@@ -90,37 +72,29 @@ func (c *CopyFiles) Do(context *Context) (*Data, error) {
 	return data, e
 }
 
-type copyJob struct {
-	localSource string
-	remoteDir   string
-}
-
-type jobResult struct {
+type copyResult struct {
 	localSource string
 	err         error
 }
 
-func copyFileWorker(id string, client *sftp.Client, jobs <-chan copyJob, results chan<- jobResult) {
-	for j := range jobs {
-		filePointers <- struct{}{} // claim a file pointer resource
-		err := doCopyFile(client, j.localSource, j.remoteDir)
-		<-filePointers // release a file pointer resource
-
-		if err != nil {
-			results <- jobResult{
-				localSource: j.localSource, err: fmt.Errorf("worker %s job failure: %+v", id, err)}
-		} else {
-			results <- jobResult{localSource: j.localSource, err: nil}
-		}
-	}
-}
-
 func doCopyFile(client *sftp.Client, sourcePath, destDir string) error {
+	filePointers <- struct{}{} // claim a file pointer resource
 	s, err := os.Open(sourcePath)
 	if err != nil {
 		return fmt.Errorf("could not open local file %s for reading: %+v", sourcePath, err)
 	}
-	defer s.Close()
+	defer func() {
+		s.Close()
+		<-filePointers // release a file pointer resource
+	}()
+
+	// Creating dir can panic if using a dir that already exists (e.g., /test, /dev/null), so
+	// check if it already exists to avoid this
+	if err, _ := client.ReadDir(destDir); err == nil {
+		// Dir already exists
+	} else if err := client.MkdirAll(destDir); err != nil {
+		return fmt.Errorf("could not create remote directory %s: %+v", destDir, err)
+	}
 
 	filename := filepath.Base(sourcePath)
 	destPath := filepath.Join(destDir, filename)
