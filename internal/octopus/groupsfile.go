@@ -11,30 +11,31 @@ import (
 	"github.com/BlaineEXE/octopus/internal/logger"
 )
 
-func getAddrsFromGroupsFile(hostGroups []string, groupsFile string) ([]string, error) {
+// Allow this to be overridden for tests.
+var getAddrsFromGroupsFile = func(hostGroups []string, groupsFile string) ([]string, error) {
 	logger.Info.Println("groups file: ", groupsFile)
 
 	f, err := os.Open(groupsFile)
 	if err != nil {
-		return []string{}, fmt.Errorf("could not load hosts file %s: %+v", groupsFile, err)
+		return []string{}, fmt.Errorf("could not load groups file %s: %+v", groupsFile, err)
 	}
 
 	fileGroups, err := getAllGroupsInFile(f)
 	if err != nil {
-		return []string{}, fmt.Errorf("error parsing hosts file %s: %+v", groupsFile, err)
+		return []string{}, fmt.Errorf("error parsing groups file %s: %+v", groupsFile, err)
 	}
 
 	// Make a '${<group>}' argument for each group
 	gVars := []string{}
 	for _, g := range hostGroups {
 		if _, ok := fileGroups[g]; !ok {
-			return []string{}, fmt.Errorf("host group %s not found in hosts file %s", g, groupsFile)
+			return []string{}, fmt.Errorf("host group %s not found in groups file %s", g, groupsFile)
 		}
 		gVars = append(gVars, fmt.Sprintf("${%s}", g))
 	}
 
-	// Source the hosts file, and echo all the groups without newlines
-	cmd := exec.Command("/bin/bash", "-c",
+	// Source the hosts file, and echo all the groups without newlines to get all hosts
+	cmd := exec.Command("/bin/bash", "-ec",
 		fmt.Sprintf("source %s ; echo %s", groupsFile, strings.Join(gVars, " ")))
 	o, err := cmd.CombinedOutput()
 	// convert to string which has exactly one newline
@@ -52,7 +53,7 @@ func getAllGroupsInFile(f *os.File) (map[string]bool, error) {
 	fileGroups := map[string]bool{}
 	// Regex to match Bash variable definition of a host group. Matches: <varname>="
 	// <varname> can be any bash variable; the double quote is required
-	varRegex, _ := regexp.Compile("^([a-zA-Z_][a-zA-Z0-9_]+)=[\"']")
+	varRegex, _ := regexp.Compile("^([a-zA-Z_][a-zA-Z0-9_]*)=[\"']")
 	for scanner.Scan() {
 		l := strings.TrimLeft(scanner.Text(), " \t")
 		if m := varRegex.FindStringSubmatch(l); m != nil {
