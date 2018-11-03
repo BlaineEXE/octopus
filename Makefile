@@ -20,6 +20,9 @@ build: dep
 	go build $(ALL_BUILDFLAGS) -o $(OUTPUT_DIR)/octopus $(GO_BUILD_TARGET)
 	@ echo "Binary size: $$(ls -sh $(OUTPUT_DIR)/octopus | cut -d' ' -f 1)"
 
+test: dep
+	go test -cover ./cmd/... ./internal/...
+
 install: dep
 	go install $(ALL_BUILDFLAGS) $(GO_BUILD_TARGET)
 
