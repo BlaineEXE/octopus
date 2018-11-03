@@ -28,6 +28,10 @@ type Result struct {
 	Err      error
 }
 
+// Allow these to be overridden for tests
+var dialHost = ssh.Dial
+var hostnameGetter action.Doer = &action.CommandRunner{Command: "hostname"}
+
 // Go sends out a tentacle to start a new remote connection and do the action on the remote host.
 func (t *Tentacle) Go(out chan<- Result) {
 	result := Result{
@@ -40,7 +44,7 @@ func (t *Tentacle) Go(out chan<- Result) {
 	defer func() { out <- result }()
 
 	logger.Info.Println("dialing host: ", t.Host)
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", t.Host), t.ClientConfig)
+	client, err := dialHost("tcp", fmt.Sprintf("%s:22", t.Host), t.ClientConfig)
 	if err != nil {
 		result.Err = fmt.Errorf("failed to start tentacle to host %s (failed to dial): %+v", t.Host, err)
 		return
@@ -54,7 +58,6 @@ func (t *Tentacle) Go(out chan<- Result) {
 	// get the host's hostname (in parallel) for easier human identification
 	logger.Info.Println("running hostname command on host:", t.Host)
 	hch := make(chan string)
-	hostnameGetter := action.CommandRunner{Command: "hostname"}
 	go func() {
 		defer close(hch)
 		hData, err := hostnameGetter.Do(context)

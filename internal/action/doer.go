@@ -21,5 +21,4 @@ type Context struct {
 type Data struct {
 	Stdout *bytes.Buffer
 	Stderr *bytes.Buffer
-	Err    error
 }
