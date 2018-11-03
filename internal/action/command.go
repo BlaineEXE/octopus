@@ -6,6 +6,7 @@ import (
 	"math"
 
 	"github.com/BlaineEXE/octopus/internal/logger"
+	"golang.org/x/crypto/ssh"
 )
 
 // CommandRunner is a tentacle action which executes a command on a remote host.
@@ -21,22 +22,21 @@ func (r *CommandRunner) JobLimit() uint32 {
 }
 
 // Do executes the command tentacle's command on the remote host.
-func (r *CommandRunner) Do(context *Context) (*Data, error) {
-	data := &Data{
-		Stdout: new(bytes.Buffer),
-		Stderr: new(bytes.Buffer),
-	}
-
-	logger.Info.Println("establishing client connection to host:", context.Host)
-	session, err := context.Client.NewSession()
+func (r *CommandRunner) Do(host string, client *ssh.Client) (stdout, stderr *bytes.Buffer, err error) {
+	logger.Info.Println("establishing client connection to host:", host)
+	session, err := client.NewSession()
 	if err != nil {
-		return data, fmt.Errorf("failed to run command on host %s: %+v", context.Host, err)
+		err = fmt.Errorf("failed to run command on host %s: %+v", host, err)
+		return
 	}
 	defer session.Close()
 
-	logger.Info.Println("running user command on host:", context.Host)
-	session.Stdout = data.Stdout
-	session.Stderr = data.Stderr
+	logger.Info.Println("running user command on host:", host)
+	stdout = new(bytes.Buffer)
+	stderr = new(bytes.Buffer)
+	session.Stdout = stdout
+	session.Stderr = stderr
 
-	return data, session.Run(r.Command)
+	err = session.Run(r.Command)
+	return
 }

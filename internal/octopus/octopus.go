@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/BlaineEXE/octopus/internal/action"
 	"github.com/BlaineEXE/octopus/internal/logger"
 	"github.com/BlaineEXE/octopus/internal/tentacle"
 )
@@ -32,9 +31,9 @@ func New(HostGroups, GroupsFile, IdentityFile string) *Octopus {
 // Do sends out tentacles to all hosts in the host group(s) in individual goroutines and collects
 // the results of all the tentacles at the end. Returns the number of hosts that report errors if
 // the tentacles are able to be sent out.
-func (o *Octopus) Do(action action.Doer) (numHostErrors int, err error) {
+func (o *Octopus) Do(action tentacle.RemoteDoer) (numHostErrors int, err error) {
 	g := strings.Split(o.HostGroups, ",")
-	logger.Info.Println("host groups: ", g)
+	logger.Info.Println("host groups:", g)
 	hostAddrs, err := getAddrsFromGroupsFile(g, o.GroupsFile)
 	if err != nil {
 		return -1, err

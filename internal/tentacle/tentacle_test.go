@@ -6,14 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/BlaineEXE/octopus/internal/action"
 	"golang.org/x/crypto/ssh"
 )
 
 func TestTentacle_Go(t *testing.T) {
 	type fields struct {
 		Host   string
-		Action action.Doer
+		Action RemoteDoer
 	}
 
 	testClientConfig := &ssh.ClientConfig{} // all tests have same client config as input
@@ -39,21 +38,21 @@ func TestTentacle_Go(t *testing.T) {
 	mockTentacle := func(host string) *Tentacle {
 		return &Tentacle{
 			Host:         host,
-			Action:       &mockAction{&expectedContext{t, host, testClient}},
+			Action:       &mockAction{&expectedArgs{t, host, testClient}},
 			ClientConfig: testClientConfig} // shared input client config
 	}
 
 	// convenience func for reducing verbosity of setting a mock below
 	// failHostnameGetter is as simple as &failHostnamegetter{}
 	mockHostnameGetter := func(host string) *mockHostnameGetter {
-		return &mockHostnameGetter{&expectedContext{t, host, testClient}}
+		return &mockHostnameGetter{&expectedArgs{t, host, testClient}}
 	}
 
 	tests := []struct {
 		name           string
 		tentacle       *Tentacle
 		sshDialer      func(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error)
-		hostnameGetter action.Doer
+		hostnameGetter RemoteDoer
 		expectedResult *expectedResult
 	}{
 		{"fail to dial", failTentacle("1.1.1.1"), failSSHDialer, &failHostnameGetter{},
@@ -83,66 +82,67 @@ func TestTentacle_Go(t *testing.T) {
 }
 
 // test that the context sent to the action matches what should be sent to it
-type expectedContext struct {
+type expectedArgs struct {
 	t      *testing.T
 	host   string
 	client *ssh.Client
 }
 
-func (ct *expectedContext) test(c *action.Context) {
-	if c.Host != ct.host {
-		ct.t.Errorf("context.Host = %s, want %s", c.Host, ct.host)
+func (e *expectedArgs) test(host string, client *ssh.Client) {
+	if host != e.host {
+		e.t.Errorf("context.Host = %s, want %s", host, e.host)
 	}
-	if c.Client != ct.client { // compare pointers is fine
-		ct.t.Errorf("context.Client = %v, want %v", c.Client, ct.client)
+	if client != e.client { // compare pointers is fine
+		e.t.Errorf("context.Client = %v, want %v", client, e.client)
 	}
 }
 
 type failHostnameGetter struct{}
 
-func (*failHostnameGetter) Do(_ *action.Context) (*action.Data, error) {
-	return nil, fmt.Errorf("test failure on commandrunner.Do get hostname")
+func (*failHostnameGetter) Do(_ string, _ *ssh.Client) (stdout, stderr *bytes.Buffer, err error) {
+	err = fmt.Errorf("test failure on commandrunner.Do get hostname")
+	return
 }
 
 // mock hostnameGetter tests that it gets the right context
 type mockHostnameGetter struct {
-	*expectedContext
+	*expectedArgs
 }
 
-func (h *mockHostnameGetter) Do(context *action.Context) (*action.Data, error) {
-	h.test(context)
-	return &action.Data{
-		Stdout: bytes.NewBufferString("test hostname"),
-		Stderr: bytes.NewBufferString("should not appear"),
-	}, nil
+func (h *mockHostnameGetter) Do(host string, client *ssh.Client) (stdout, stderr *bytes.Buffer, err error) {
+	h.test(host, client)
+	stdout = bytes.NewBufferString("test hostname")
+	stderr = bytes.NewBufferString("should not appear")
+	err = nil
+	return
 }
 
 type failAction struct{}
 
-func (*failAction) Do(context *action.Context) (*action.Data, error) {
-	return &action.Data{
-		Stdout: bytes.NewBufferString("stdout-fail"),
-		Stderr: bytes.NewBufferString("stderr-fail"),
-	}, fmt.Errorf("test failure on tentacle.Action.Do")
+func (*failAction) Do(host string, client *ssh.Client) (stdout, stderr *bytes.Buffer, err error) {
+	stdout = bytes.NewBufferString("stdout-fail")
+	stderr = bytes.NewBufferString("stderr-fail")
+	err = fmt.Errorf("test failure on tentacle.Action.Do")
+	return
 }
 
 // mock action tests that it gets the right context
 type mockAction struct {
-	*expectedContext
+	*expectedArgs
 }
 
-func (m *mockAction) Do(context *action.Context) (*action.Data, error) {
-	m.test(context)
-	return &action.Data{
-		Stdout: bytes.NewBufferString("stdout-good"),
-		Stderr: bytes.NewBufferString("stderr-good"),
-	}, nil
+func (m *mockAction) Do(host string, client *ssh.Client) (stdout, stderr *bytes.Buffer, err error) {
+	m.test(host, client)
+	stdout = bytes.NewBufferString("stdout-good")
+	stderr = bytes.NewBufferString("stderr-good")
+	err = nil
+	return
 }
 
 type expectedResult struct {
 	hostnameContains string // hostname should contain this string, "" is don't care
-	stdout           string // Data.Stdout should stringify to this, "" is don't care
-	stderr           string // Data.Stderr should stringify to this, "" is don't care
+	stdout           string // Stdout should stringify to this, "" is don't care
+	stderr           string // Stderr should stringify to this, "" is don't care
 	wantErr          bool   // error desired in result
 }
 
@@ -150,13 +150,11 @@ func (e *expectedResult) test(t *testing.T, r *Result) {
 	if !strings.Contains(r.Hostname, e.hostnameContains) {
 		t.Errorf("Result.Hostname = %s, want %s", r.Hostname, e.hostnameContains)
 	}
-	if r.Data != nil {
-		if e.stdout != "" && e.stdout != r.Data.Stdout.String() {
-			t.Errorf("Result.Data.Stdout = %s, want %s", r.Data.Stdout.String(), e.stdout)
-		}
-		if e.stderr != "" && e.stderr != r.Data.Stderr.String() {
-			t.Errorf("Result.Data.Stderr = %s, want %s", r.Data.Stderr.String(), e.stdout)
-		}
+	if e.stdout != "" && e.stdout != r.Stdout.String() {
+		t.Errorf("Result.Stdout = %s, want %s", r.Stdout.String(), e.stdout)
+	}
+	if e.stderr != "" && e.stderr != r.Stderr.String() {
+		t.Errorf("Result.Stderr = %s, want %s", r.Stderr.String(), e.stdout)
 	}
 	if e.wantErr != (r.Err != nil) {
 		t.Errorf("Result.Err? %t, wanted? %t", (r.Err != nil), e.wantErr)

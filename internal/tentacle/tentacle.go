@@ -1,6 +1,7 @@
 package tentacle
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -10,12 +11,18 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// RemoteDoer is the interface that wraps the Do method.
+type RemoteDoer interface {
+	// Do calls the Doer to do something on a remote host and return stdin and stdout
+	Do(host string, client *ssh.Client) (stdout, stderr *bytes.Buffer, err error)
+}
+
 // Tentacle represents one of Octopus's many parallel-running processes that perform an action
 // on a remote host.
 // A tentacle can "Do" an action. An action takes a target and returns a result.
 type Tentacle struct {
 	Host         string
-	Action       action.Doer
+	Action       RemoteDoer
 	ClientConfig *ssh.ClientConfig
 }
 
@@ -24,20 +31,20 @@ type Tentacle struct {
 // also includes information needed to report success and failure conditions.
 type Result struct {
 	Hostname string
-	Data     *action.Data
+	Stdout   *bytes.Buffer
+	Stderr   *bytes.Buffer
 	Err      error
 }
 
 // Allow these to be overridden for tests
 var dialHost = ssh.Dial
-var hostnameGetter action.Doer = &action.CommandRunner{Command: "hostname"}
+var hostnameGetter RemoteDoer = &action.CommandRunner{Command: "hostname"}
 
 // Go sends out a tentacle to start a new remote connection and do the action on the remote host.
 func (t *Tentacle) Go(out chan<- Result) {
 	result := Result{
 		// fallback hostname includes the raw host (e.g., IP) for some ability to identify the host
 		Hostname: fmt.Sprintf("%s: could not get hostname", t.Host),
-		Data:     &action.Data{},
 		// fallback error - should never be returned, but *just* in case, make sure it isn't nil
 		Err: fmt.Errorf("failed to send tentacle: unable to get more detail"),
 	}
@@ -50,26 +57,21 @@ func (t *Tentacle) Go(out chan<- Result) {
 		return
 	}
 
-	context := &action.Context{
-		Host:   t.Host,
-		Client: client,
-	}
-
 	// get the host's hostname (in parallel) for easier human identification
 	logger.Info.Println("running hostname command on host:", t.Host)
 	hch := make(chan string)
 	go func() {
 		defer close(hch)
-		hData, err := hostnameGetter.Do(context)
+		o, _, err := hostnameGetter.Do(t.Host, client)
 		if err != nil {
 			hch <- result.Hostname // use fallback hostname on error
 			return
 		}
-		hch <- strings.TrimRight(hData.Stdout.String(), "\n")
+		hch <- strings.TrimRight(o.String(), "\n")
 	}()
 
 	// Do whatever action the user wants
-	result.Data, result.Err = t.Action.Do(context)
+	result.Stdout, result.Stderr, result.Err = t.Action.Do(t.Host, client)
 
 	result.Hostname = <-hch
 	return
@@ -81,16 +83,14 @@ func (r *Result) Print() {
 	fmt.Printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 	fmt.Printf(" %s\n", r.Hostname)
 	fmt.Printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n")
-	if r.Data != nil {
-		// if buffer is nil, (*bytes.Buffer).String() returns "<nil>"; do not print this
-		o := strings.TrimRight(r.Data.Stdout.String(), "\n")
-		if r.Data.Stdout != nil && o != "" {
-			fmt.Printf("%s\n\n", o)
-		}
-		o = strings.TrimRight(r.Data.Stderr.String(), "\n")
-		if r.Data.Stderr != nil && o != "" {
-			fmt.Fprintf(os.Stderr, "Stderr:\n\n%s\n\n", o) // to stderr
-		}
+	// if buffer is nil, (*bytes.Buffer).String() returns "<nil>"; do not print this
+	o := strings.TrimRight(r.Stdout.String(), "\n")
+	if r.Stdout != nil && o != "" {
+		fmt.Printf("%s\n\n", o)
+	}
+	o = strings.TrimRight(r.Stderr.String(), "\n")
+	if r.Stderr != nil && o != "" {
+		fmt.Fprintf(os.Stderr, "Stderr:\n\n%s\n\n", o) // to stderr
 	}
 	if r.Err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %+v\n\n", r.Err) // to stderr

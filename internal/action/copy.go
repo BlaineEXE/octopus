@@ -9,6 +9,7 @@ import (
 
 	"github.com/BlaineEXE/octopus/internal/logger"
 	"github.com/BlaineEXE/octopus/internal/util"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/pkg/sftp"
 )
@@ -31,25 +32,28 @@ type FileCopier struct {
 }
 
 // Do executes the command tentacle's command on the remote host.
-func (c *FileCopier) Do(context *Context) (*Data, error) {
-	logger.Info.Println("establishing sftp connection to host:", context.Host)
-	sftp, err := sftp.NewClient(context.Client)
+func (c *FileCopier) Do(host string, client *ssh.Client) (stdout, stderr *bytes.Buffer, err error) {
+	logger.Info.Println("establishing sftp connection to host:", host)
+	sftp, err := sftp.NewClient(client)
 	if err != nil {
-		return nil, fmt.Errorf("unable to start sftp subsystem for host %s: %+v", context.Host, err)
+		err = fmt.Errorf("unable to start sftp subsystem for host %s: %+v", host, err)
+		return
 	}
 	defer sftp.Close()
 
-	if err := createRemoteDir(sftp, c.RemoteDir); err != nil {
-		return nil, err
+	if err = createRemoteDir(sftp, c.RemoteDir); err != nil {
+		return
 	}
 
 	errCh := make(chan error, maxFilePointers)
 	var wg sync.WaitGroup
 
 	for _, s := range c.LocalSources {
-		fp, err := util.AbsPath(s)
+		var fp string
+		fp, err = util.AbsPath(s)
 		if err != nil {
-			return nil, fmt.Errorf("cannot start copying files: %+v", err)
+			err = fmt.Errorf("cannot start copying files: %+v", err)
+			return
 		}
 		wg.Add(1)
 		go doCopyDirOrFile(sftp, fp, c.RemoteDir, c.Recursive, &wg, errCh)
@@ -61,27 +65,25 @@ func (c *FileCopier) Do(context *Context) (*Data, error) {
 		close(errCh)
 	}()
 
-	data := &Data{
-		Stdout: new(bytes.Buffer),
-		Stderr: new(bytes.Buffer),
-	}
+	stdout = new(bytes.Buffer)
+	stderr = new(bytes.Buffer)
 
 	numFail := 0
 	for err := range errCh {
 		if err != nil {
 			numFail++
 			// append fail message to stderr
-			data.Stderr.WriteString(fmt.Sprintf("%+v\n", err))
+			stderr.WriteString(fmt.Sprintf("%+v\n", err))
 		}
 	}
 
-	e := error(nil)
+	err = error(nil)
 	if numFail > 0 {
-		e = fmt.Errorf("failed to copy %d path(s)", numFail)
+		err = fmt.Errorf("failed to copy %d path(s)", numFail)
 	} else {
-		data.Stdout.WriteString("wrote all files")
+		stdout.WriteString("wrote all files")
 	}
-	return data, e
+	return
 }
 
 func doCopyDirOrFile(
