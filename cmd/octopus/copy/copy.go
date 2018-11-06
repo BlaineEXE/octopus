@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/BlaineEXE/octopus/internal/action"
-
-	"github.com/spf13/viper"
+	"github.com/BlaineEXE/octopus/internal/tentacle"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/BlaineEXE/octopus/cmd/octopus/config"
 	"github.com/BlaineEXE/octopus/internal/logger"
@@ -33,12 +32,8 @@ var CopyCmd = &cobra.Command{
 
 		o := config.TrainOctopus()
 
-		c := &action.FileCopier{
-			LocalSources: localSources,
-			RemoteDir:    remoteDir,
-			Recursive:    viper.GetBool("recursive"),
-		}
-		numErrs, err := o.Do(c)
+		opts := tentacle.NewCopyFileOptions(viper.GetBool("recursive"))
+		numErrs, err := o.Do(tentacle.FileCopier(localSources, remoteDir, opts))
 		if err != nil {
 			return fmt.Errorf("octopus copy files failure: %+v", err)
 		}

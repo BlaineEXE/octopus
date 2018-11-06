@@ -8,8 +8,12 @@ import (
 
 	"github.com/BlaineEXE/octopus/internal/logger"
 	"github.com/BlaineEXE/octopus/internal/octopus"
+	"github.com/BlaineEXE/octopus/internal/remote"
+	"github.com/BlaineEXE/octopus/internal/ssh"
 	"github.com/BlaineEXE/octopus/internal/util"
 )
+
+var remoteConnector remote.Connector = ssh.NewConnector()
 
 // TrainOctopus returns an octopus trained (configured) for the user's environment.
 // This sanitizes values set in the config file and on the commandline to ensure the octopus
@@ -33,10 +37,12 @@ func TrainOctopus() *octopus.Octopus {
 	groupsFile := getAbsFilePath(viper.GetString("groups-file"))
 	identityFile := getAbsFilePath(viper.GetString("identity-file"))
 
+	remoteConnector.AddIdentityFile(identityFile)
+
 	return octopus.New(
+		remoteConnector,
 		hostGroups,
 		groupsFile,
-		identityFile,
 	)
 }
 

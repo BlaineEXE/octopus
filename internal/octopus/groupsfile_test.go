@@ -1,13 +1,11 @@
 package octopus
 
 import (
-	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
 	"path"
 	"reflect"
 	"testing"
+
+	"github.com/BlaineEXE/octopus/internal/util/testutil"
 )
 
 var runtimeGetAddrsFromGroupsFile func(hostGroups []string, groupsFile string) ([]string, error)
@@ -66,37 +64,18 @@ a='9.9.9.9'
 t="1.1.1.1'
 `
 
-func createFile(t *testing.T, path, contents string, writeonly bool) {
-	f, err := os.Create(path)
-	defer f.Close()
-	if err != nil {
-		t.Fatalf("Could not create test file: %s", path)
-	}
-	if _, err := f.WriteString(contents); err != nil {
-		t.Fatalf("Could not write to test file: %s", path)
-	}
-	if writeonly { // write only files will prevent file from being read, should throw error
-		os.Chmod(path, 0222)
-	}
-}
-
 func Test_getAddrsFromGroupsFile(t *testing.T) {
 	// Make temp dir for testing
-	tmpRoot, err := ioutil.TempDir("", "")
-	if err != nil {
-		log.Fatalf("failed to create temp dir for testing. %+v", err)
-	}
-	defer os.RemoveAll(tmpRoot)
+	tmpRoot, cleanup := testutil.TempDir("")
+	defer cleanup()
 	goodGroupsFile := path.Join(tmpRoot, "goodGroups")
 	noGroupsFile := path.Join(tmpRoot, "noGroups")
 	unparsableGroupsFile := path.Join(tmpRoot, "unparsableGroups")
 	writeonlyGroupsFile := path.Join(tmpRoot, "writeonlyGroupsFile")
-	createFile(t, goodGroupsFile, parsableGroups, false)
-	createFile(t, noGroupsFile, noGroups, false)
-	createFile(t, unparsableGroupsFile, unparsableGroups, false)
-	createFile(t, writeonlyGroupsFile, parsableGroups, true)
-	b, _ := ioutil.ReadFile(goodGroupsFile)
-	fmt.Println(string(b))
+	testutil.WriteFile(goodGroupsFile, parsableGroups, 0644)
+	testutil.WriteFile(noGroupsFile, noGroups, 0644)
+	testutil.WriteFile(unparsableGroupsFile, unparsableGroups, 0644)
+	testutil.WriteFile(writeonlyGroupsFile, parsableGroups, 0222)
 
 	tests := []struct {
 		name       string

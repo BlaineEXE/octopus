@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/BlaineEXE/octopus/internal/action"
-
 	"github.com/spf13/cobra"
 
 	"github.com/BlaineEXE/octopus/cmd/octopus/config"
 	"github.com/BlaineEXE/octopus/internal/logger"
+	"github.com/BlaineEXE/octopus/internal/tentacle"
 )
 
 const (
@@ -32,10 +31,7 @@ var RunCmd = &cobra.Command{
 
 		o := config.TrainOctopus()
 
-		c := &action.CommandRunner{
-			Command: args[0],
-		}
-		numErrs, err := o.Do(c)
+		numErrs, err := o.Do(tentacle.CommandRunner(args[0]))
 		if err != nil {
 			return fmt.Errorf("octopus run command failure: %+v", err)
 		}
