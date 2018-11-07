@@ -122,35 +122,35 @@ func TestFileCopier(t *testing.T) {
 			dirFails := remotetest.Clear(&a.DirCreateFails)
 			files := remotetest.Clear(&a.FileCopies)
 			fileFails := remotetest.Clear(&a.FileCopyFails)
-			compareLists(t, tt.wants.dirs, dirs, "DirCreates")
-			compareLists(t, tt.wants.dirFails, dirFails, "DirCreateFails")
-			compareLists(t, tt.wants.files, files, "FileCopies")
-			compareLists(t, tt.wants.fileFails, fileFails, "FileCopyFails")
+			testutil.CompareStringLists(t, tt.wants.dirs, dirs, "DirCreates")
+			testutil.CompareStringLists(t, tt.wants.dirFails, dirFails, "DirCreateFails")
+			testutil.CompareStringLists(t, tt.wants.files, files, "FileCopies")
+			testutil.CompareStringLists(t, tt.wants.fileFails, fileFails, "FileCopyFails")
 		})
 	}
 }
 
-func compareLists(t *testing.T, expected []string, got []string, name string) {
-	g := make([]string, len(got))
-	copy(g, got)
-	var err error
-	for _, e := range expected {
-		g, err = removeFromList(e, g)
-		//fmt.Println(g)
-		if err != nil {
-			t.Errorf("%s: %+v", name, err)
-		}
-	}
-	if len(g) > 0 {
-		t.Errorf("%s has extraneous items: %+v", name, g)
-	}
-}
+// func compareLists(t *testing.T, expected []string, got []string, name string) {
+// 	g := make([]string, len(got))
+// 	copy(g, got)
+// 	var err error
+// 	for _, e := range expected {
+// 		g, err = removeFromList(e, g)
+// 		//fmt.Println(g)
+// 		if err != nil {
+// 			t.Errorf("%s: %+v", name, err)
+// 		}
+// 	}
+// 	if len(g) > 0 {
+// 		t.Errorf("%s has extraneous items: %+v", name, g)
+// 	}
+// }
 
-func removeFromList(key string, list []string) ([]string, error) {
-	for i, s := range list {
-		if s == key {
-			return append(list[:i], list[i+1:]...), nil // remove element & return new list
-		}
-	}
-	return list, fmt.Errorf("%s not in list %+v", key, list)
-}
+// func removeFromList(key string, list []string) ([]string, error) {
+// 	for i, s := range list {
+// 		if s == key {
+// 			return append(list[:i], list[i+1:]...), nil // remove element & return new list
+// 		}
+// 	}
+// 	return list, fmt.Errorf("%s not in list %+v", key, list)
+// }
