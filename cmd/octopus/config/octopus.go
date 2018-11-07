@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/spf13/viper"
 
@@ -27,12 +28,13 @@ func TrainOctopus() *octopus.Octopus {
 	logger.Info.Println("Config file used: ", viper.ConfigFileUsed())
 	logger.Info.Println("Parsing global flags")
 
-	hostGroups := viper.GetString("host-groups")
-	if hostGroups == "" {
+	rawHostGroups := viper.GetString("host-groups")
+	if rawHostGroups == "" {
 		os.Stderr.WriteString("ERROR: Required value 'host-groups' was not set in the config or in commandline\n")
 		os.Stderr.WriteString(OctopusCmd.UsageString())
 		os.Exit(-1)
 	}
+	hostGroups := strings.Split(rawHostGroups, ",")
 
 	groupsFile := getAbsFilePath(viper.GetString("groups-file"))
 	identityFile := getAbsFilePath(viper.GetString("identity-file"))

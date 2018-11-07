@@ -14,13 +14,13 @@ import (
 // many arms.
 type Octopus struct {
 	remoteConnector remote.Connector
-	hostGroups      string
+	hostGroups      []string
 	groupsFile      string
 }
 
 // New finds an octopus and trains it about how its environment is configured and what host groups
 // it should operate on.
-func New(c remote.Connector, hostGroups, groupsFile string) *Octopus {
+func New(c remote.Connector, hostGroups []string, groupsFile string) *Octopus {
 	return &Octopus{
 		remoteConnector: c,
 		hostGroups:      hostGroups,
@@ -32,9 +32,8 @@ func New(c remote.Connector, hostGroups, groupsFile string) *Octopus {
 // the results of all the tentacles at the end. Returns the number of hosts that report errors if
 // the tentacles are able to be sent out.
 func (o *Octopus) Do(action remote.Action) (numHostErrors int, err error) {
-	g := strings.Split(o.hostGroups, ",")
-	logger.Info.Println("host groups:", g)
-	hostAddrs, err := getAddrsFromGroupsFile(g, o.groupsFile)
+	logger.Info.Println("host groups:", o.hostGroups)
+	hostAddrs, err := getAddrsFromGroupsFile(o.hostGroups, o.groupsFile)
 	if err != nil {
 		return -1, err
 	}
