@@ -39,7 +39,7 @@ var createRemote = func(c *sftp.Client, filePath string) (*sftp.File, error) {
 }
 
 var writeToRemote = func(dest *sftp.File, source *os.File) (int64, error) {
-	return dest.WriteTo(source)
+	return dest.ReadFrom(source)
 }
 
 var closeRemoteFile = func(f *sftp.File) error {
