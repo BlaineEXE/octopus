@@ -42,7 +42,9 @@ func (a *Actor) sftpClient() (*sftp.Client, error) {
 		sftp, err := newSFTPClient(a.sshClient)
 		a._sftpClient = sftp
 		a._sftpClientErr = err
-		a.closers = append(a.closers, sftp) // make sure SFTP client is closed on Actor.Close
+		if err == nil {
+			a.closers = append(a.closers, sftp) // make sure SFTP client is closed on Actor.Close
+		}
 	})
 	return a._sftpClient, a._sftpClientErr
 }

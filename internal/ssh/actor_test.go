@@ -111,6 +111,7 @@ func TestActor_sftpClient(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := newActor(tt.name, stubSSHClient)
+			startingClosers := len(a.closers)
 			newSFTPClient = tt.newSFTPClient
 			s1, e1 := a.sftpClient()
 			if (e1 != nil) != tt.wantErr {
@@ -119,6 +120,13 @@ func TestActor_sftpClient(t *testing.T) {
 			}
 			if !reflect.DeepEqual(s1, tt.want) {
 				t.Errorf("Actor.sftpClient() = %v, want %v", s1, tt.want)
+			}
+			if !tt.wantErr {
+				// on success, the sftp client needs to have been appended to closers
+				assert.Equal(t, tt.want, a.closers[startingClosers])
+			} else {
+				// on fail a closer should NOT have been appended
+				assert.Equal(t, startingClosers, len(a.closers))
 			}
 			// output and errors should be the same after the second call to sftpClient()
 			s2, e2 := a.sftpClient()
