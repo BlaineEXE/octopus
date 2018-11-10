@@ -1,3 +1,6 @@
+# Entering/Leaving directory messages are annoying and not very useful
+MAKEFLAGS += --no-print-directory
+
 GO_IMPORT_ROOT ?= github.com/BlaineEXE/octopus
 GO_BUILD_TARGET := $(GO_IMPORT_ROOT)/cmd/octopus
 OUTPUT_DIR ?= _output
@@ -22,6 +25,11 @@ build: dep
 
 test: dep
 	go test -cover ./cmd/... ./internal/...
+
+test.integration:
+	@ mkdir -p test/_output
+	@ cp _output/octopus test/_output/octopus
+	@ $(MAKE) --directory test all
 
 install: dep
 	go install $(ALL_BUILDFLAGS) $(GO_BUILD_TARGET)
