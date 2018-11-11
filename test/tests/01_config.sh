@@ -32,12 +32,12 @@ assert_success "  and finally killing ssh daemon on port 3022" \
   octopus -g all run 'pkill --full "/usr/sbin/sshd -p 3022"'
 
 assert_success "with default user (root)" octopus -g all run 'id --user --name'
-assert_output_count "root" 3
+assert_output_count "root" $NUM_HOSTS
 assert_failure "with invalid user" octopus -g all -u 'invalid' run 'ls'
 assert_success "with --user arg" octopus -g all --user 'tester' run 'id --user --name'
-assert_output_count "tester" 3
+assert_output_count "tester" $NUM_HOSTS
 assert_success "with -u arg" octopus -g all -u 'tester' run 'id --user --name'
-assert_output_count "tester" 3
+assert_output_count "tester" $NUM_HOSTS
 
 echo ""
 echo "Running config file tests ..."
