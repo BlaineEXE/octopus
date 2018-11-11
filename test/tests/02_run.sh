@@ -27,18 +27,22 @@ assert_output_count "$HOST_BASENAME" $(( (NUM_HOSTS - 1) * 2 ))
 
 
 # Move the 'hostname' binary to simulate failed hostname commands
-octopus -g all run 'mv /usr/bin/hostname /usr/bin/hostname.bkp' 1> /dev/null
+# hostname_location="/usr/bin/hostname"  # opensuse
+hostname_location="/bin/hostname"  # ubuntu
+octopus -g all run "mv ${hostname_location} ${hostname_location}.bkp" 1> /dev/null
 
 assert_retcode 'with hostname failure on all nodes' 0 octopus -g all run 'ls'
 assert_output_count "$HOST_BASENAME" 0
 
-octopus -g all run 'mv /usr/bin/hostname.bkp /usr/bin/hostname' 1> /dev/null
+octopus -g all run "mv ${hostname_location}.bkp ${hostname_location}" 1> /dev/null
 
 
 # move the 'ls' binary for 'one' node to simulate failed command on subset of nodes
-octopus -g one run 'mv /usr/bin/ls /usr/bin/ls.bkp' 1> /dev/null
+# ls_location="/usr/bin/ls"  # opensuse
+ls_location="/bin/ls"  # ubuntu
+octopus -g one run "mv ${ls_location} ${ls_location}.bkp" 1> /dev/null
 assert_retcode 'with command failure on subset of nodes' 1 octopus -g all run 'ls'
 for host in $HOSTNAMES; do # command failure should still report hostnames
   assert_output_count "$host" 1
 done
-octopus -g one run 'mv /usr/bin/ls.bkp /usr/bin/ls' 1> /dev/null
+octopus -g one run "mv ${ls_location}.bkp ${ls_location}" 1> /dev/null

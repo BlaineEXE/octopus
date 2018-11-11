@@ -5,6 +5,7 @@ echo "Running CLI tests ..."
 
 # move ssh keys away from default location for testing identity-file arg
 mv "$HOME/.ssh" "$HOME/ssh-keys"
+assert_failure "with identity file not found" octopus -g all run hostname
 assert_success "with --host-groups and --identity-file args" \
   octopus --host-groups all --identity-file "$HOME/ssh-keys"/id_rsa run hostname
 assert_success "with -g and -i args" octopus -g all -i "$HOME/ssh-keys"/id_rsa run hostname
@@ -13,11 +14,30 @@ mv "$HOME/ssh-keys" "$HOME/.ssh"
 # move group file away from default location for testing group-file arg
 mkdir -p "$HOME/work"
 mv "$GROUPFILE" "$HOME/work/groups-file"
+assert_failure "with groups file not found" octopus -g all run hostname
 assert_success "with --groups-file arg" \
   octopus -g all --groups-file "$HOME/work/groups-file" run hostname
 assert_success "with -f arg" octopus -g all -f "$HOME/work/groups-file" run hostname
 mv "$HOME/work/groups-file" "$GROUPFILE"
 
+# Start a second ssh daemon on hosts listening on port 3022 to test connecting to different port
+assert_success "with ssh daemon running on port 3022" \
+  octopus -g all run '/usr/sbin/sshd -p 3022'
+assert_success "  and daemon is verified running on port 3022" \
+  octopus -g all run 'ps aux | grep "/usr/sbin/sshd -p 3022"'
+assert_failure "  ... with invalid port" octopus -g all -p 5555 all run hostname
+assert_success "  ... with --port arg" octopus -g all --port 3022 run hostname
+assert_success "  ... with -p arg" octopus -g all -p 3022 run hostname
+assert_success "  and finally killing ssh daemon on port 3022" \
+  octopus -g all run 'pkill --full "/usr/sbin/sshd -p 3022"'
+
+assert_success "with default user (root)" octopus -g all run 'id --user --name'
+assert_output_count "root" 3
+assert_failure "with invalid user" octopus -g all -u 'invalid' run 'ls'
+assert_success "with --user arg" octopus -g all --user 'tester' run 'id --user --name'
+assert_output_count "tester" 3
+assert_success "with -u arg" octopus -g all -u 'tester' run 'id --user --name'
+assert_output_count "tester" 3
 
 echo ""
 echo "Running config file tests ..."

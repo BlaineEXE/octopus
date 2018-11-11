@@ -36,6 +36,8 @@ func (a *Actor) RunCommand(command string) (stdout, stderr *bytes.Buffer, err er
 	session.Stdout = stdout
 	session.Stderr = stderr
 
-	err = runCommand(session, command)
+	if err = runCommand(session, command); err != nil {
+		err = fmt.Errorf("command run error: %+v", err)
+	}
 	return
 }
