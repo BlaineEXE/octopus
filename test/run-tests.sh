@@ -13,7 +13,8 @@ num_suites=0
 num_failures=0
 function run_test () { # 1) test_name
   docker run --rm --name $RUNNER_NAME \
-        --volume $PWD/$GROUPFILE_DIR:/root/$GROUPFILE_DIR:ro \
+        --user tester \
+        --volume $PWD/$GROUPFILE_DIR:/home/tester/$GROUPFILE_DIR:ro \
         --env NUM_HOSTS=$NUM_HOSTS \
         --env HOST_BASENAME=$HOST_BASENAME \
         --env GROUPFILE_DIR=$GROUPFILE_DIR \
@@ -23,8 +24,9 @@ function run_test () { # 1) test_name
   echo ""
 }
 
-run_test 01_config_file.sh
+run_test 01_config.sh
 run_test 02_run.sh
+run_test 03_copy.sh
 
 echo "Test suites run: $num_suites"
 echo "Test failures: $num_failures"

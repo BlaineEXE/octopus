@@ -26,7 +26,7 @@ build: dep
 test: dep
 	go test -cover ./cmd/... ./internal/...
 
-test.integration:
+test.integration: build
 	@ mkdir -p test/_output
 	@ cp _output/octopus test/_output/octopus
 	@ $(MAKE) --directory test all

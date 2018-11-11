@@ -1,18 +1,6 @@
 #!/usr/bin/env bash
 
 #
-# INTERPRETED CONFIG
-#
-
-GROUPFILE="/root/_node-list"
-cp "/root/$GROUPFILE_DIR/_node-list" "$GROUPFILE"
-
-HOSTNAMES=""
-for i in $(seq 1 $NUM_HOSTS); do
-  HOSTNAMES="$HOSTNAMES $HOST_BASENAME-$i"
-done
-
-#
 # FUNCTIONS
 #
 
@@ -33,7 +21,7 @@ printarray () {
 num_passes=0
 function pass () {
   num_passes=$((num_passes + 1))
-  printf "    PASS: "
+  printf "      PASS: "
   printarray "$@"
   echo ''
 }
@@ -41,7 +29,7 @@ function pass () {
 num_failures=0
 function fail () {
   num_failures=$((num_failures + 1))
-  printf "    FAIL: "
+  printf "      FAIL: "
   printarray "$@"
   echo ''
 }
@@ -79,10 +67,10 @@ function assert_retcode () { # 1) test name 2) retcode  ...) command
 
 function assert_output_count () { # 1) output desired 2) desired count
   if [ "$(grep --count "$1" /tmp/output)" == "$2" ]; then
-    pass "$1" is in output exactly $2 times
+    pass "'$1' is in output exactly $2 times"
   else
     cat /tmp/output
-    fail "$1" is in output "$(grep --count "$1" /tmp/output)" times; expected $2
+    fail "'$1' is in output $(grep --count "$1" /tmp/output) times; expected $2"
   fi
 }
 
@@ -91,7 +79,17 @@ function assert_output_count () { # 1) output desired 2) desired count
 #
 
 # Double check that our home dir is /root
-if [ "$HOME" != "/root" ]; then
-  echo "Home $HOME is not /root"
+if [ "$HOME" != "/home/tester" ]; then
+  echo "Home $HOME is not /home/tester"
   exit 1
 fi
+
+GROUPFILE="$HOME/_node-list"
+cp "$HOME/$GROUPFILE_DIR/_node-list" "$GROUPFILE"
+chown "$(id --user --name)" "$GROUPFILE"
+
+# Generate the HOSTNAMES variable which lists all our hostnames
+HOSTNAMES=""
+for i in $(seq 1 $NUM_HOSTS); do
+  HOSTNAMES="$HOSTNAMES $HOST_BASENAME-$i"
+done

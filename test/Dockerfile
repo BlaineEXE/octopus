@@ -5,16 +5,20 @@ RUN zypper --gpg-auto-import-keys --non-interactive install \
         net-tools \
         openssh
 
-WORKDIR /root
-
 COPY .ssh/* /root/.ssh/
 COPY .ssh/id_rsa /etc/ssh/ssh_host_rsa_key
 
 CMD [ "/usr/sbin/sshd", "-D" ]
 
-# The integration tests we'll run from the test container
-RUN mkdir /root/tests
-COPY tests/* /root/tests/
+# The integration tests we'll run from the test container as 'tester' user
+RUN useradd --create-home tester
+WORKDIR /home/tester
+COPY .ssh/* /home/tester/.ssh/
+RUN mkdir /home/tester/tests
+COPY tests/* /home/tester/tests/
+RUN chown --recursive tester /home/tester
 
+# Allow /etc/octopus to be read/writeable by our 'tester' user
+RUN mkdir -p /etc/octopus && chmod --recursive 777 /etc/octopus
 # The binary under test should be copied to the tests/_output dir
 COPY _output/octopus /usr/bin
