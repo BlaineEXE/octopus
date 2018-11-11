@@ -41,6 +41,7 @@ func TrainOctopus() *octopus.Octopus {
 
 	remoteConnector.AddIdentityFile(identityFile)
 	remoteConnector.Port(uint16(viper.GetInt("port")))
+	remoteConnector.User(viper.GetString("user"))
 
 	return octopus.New(
 		remoteConnector,

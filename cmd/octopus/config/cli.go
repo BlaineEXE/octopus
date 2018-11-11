@@ -75,6 +75,8 @@ func init() {
 		"(ssh) file from which the identity (private key) for public key authentication is read")
 	OctopusCmd.PersistentFlags().Uint16P("port", "p", 22,
 		"(ssh) port on which to connect to hosts")
+	OctopusCmd.PersistentFlags().StringP("user", "u", "root",
+		"user as which to connect to hosts (corresponds to ssh \"-l\" option)")
 	OctopusCmd.PersistentFlags().BoolP("verbose", "v", false,
 		"print additional information about octopus progress")
 

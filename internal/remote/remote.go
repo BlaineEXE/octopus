@@ -16,6 +16,9 @@ type Connector interface {
 	// Port should set the port on which remote connections will be made to hosts.
 	Port(p uint16) error
 
+	// User should set the user on hosts to which connections will be made.
+	User(u string) error
+
 	// Connect should connect to the host with the options that have been previously set and return
 	// an actor which can be called to perform tasks on the remote host. If an error is reported,
 	// the actor should not need to have its Close method called.

@@ -41,7 +41,12 @@ func (c *MockRemoteConnector) AddIdentityFile(filePath string) error {
 
 // Port is a mock method that is not yet implemented.
 func (c *MockRemoteConnector) Port(p uint16) error {
-	return fmt.Errorf("not implemented")
+	panic("not implemented")
+}
+
+// User is a mock method that is not yet implemented.
+func (c *MockRemoteConnector) User(u string) error {
+	panic("not implemented")
 }
 
 // Connect is a mock method that appends each host to HostConnects.
