@@ -52,6 +52,12 @@ func (c *Connector) Port(p uint16) error {
 	return nil
 }
 
+// User sets the user on hosts to which connections will be made. The default user is 'root'.
+func (c *Connector) User(u string) error {
+	c.clientConfig.User = u
+	return nil
+}
+
 var dialHost = ssh.Dial
 
 // Connect connects to the host via ssh with the options that have been previously set and returns

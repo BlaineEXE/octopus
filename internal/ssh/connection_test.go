@@ -91,15 +91,19 @@ func TestConnector_Connect(t *testing.T) {
 	testutil.WriteFile(parsableKeyfile, parsableKey, 0644)
 
 	// Test connector ready to go with an identity file added
-	stubConnector := NewConnector()
-	stubConnector.AddIdentityFile(parsableKeyfile)
+	stubConnector := func() *Connector {
+		c := NewConnector()
+		c.AddIdentityFile(parsableKeyfile)
+		return c
+	}
 
 	stubClient := &ssh.Client{} // stub dialer always returns this client
 
 	var lastAddrDialed string // for checking that the right address was dialed
 	failDial := true
 	dialHost = func(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
-		lastAddrDialed = addr
+		// include the user in report of last addr dialed to keep test definitions leaner
+		lastAddrDialed = config.User + "@" + addr
 		if failDial {
 			return nil, fmt.Errorf("test dial error")
 		}
@@ -130,16 +134,22 @@ func TestConnector_Connect(t *testing.T) {
 		failDial  bool
 		wants     wants
 	}{
-		{"successful connection", stubConnector, "1.1.1.1", false, wants{
-			addrDialed: "1.1.1.1:22", actor: expectedActor("1.1.1.1"), err: false}},
-		{"fail to dial", stubConnector, "2.2.2.2", true, wants{
-			addrDialed: "2.2.2.2:22", actor: nil, err: true}},
+		{"successful connection", stubConnector(), "1.1.1.1", false, wants{
+			addrDialed: "root@1.1.1.1:22", actor: expectedActor("1.1.1.1"), err: false}},
+		{"fail to dial", stubConnector(), "2.2.2.2", true, wants{
+			addrDialed: "root@2.2.2.2:22", actor: nil, err: true}},
 		{"connector w/o id file", NewConnector(), "not dialed", false, wants{
 			addrDialed: "not dialed", actor: nil, err: true}},
+		// Effectively test Port option
 		{"connect with a different port",
-			func() (c *Connector) { c = new(Connector); *c = *stubConnector; c.Port(2222); return }(),
+			func() *Connector { c := stubConnector(); c.Port(2222); return c }(),
 			"3.3.3.3", false, wants{
-				addrDialed: "3.3.3.3:2222", actor: expectedActor("3.3.3.3"), err: false}},
+				addrDialed: "root@3.3.3.3:2222", actor: expectedActor("3.3.3.3"), err: false}},
+		// Effectively test User option
+		{"connect with a different user",
+			func() *Connector { c := stubConnector(); c.User("sam"); return c }(),
+			"4.4.4.4", false, wants{
+				addrDialed: "sam@4.4.4.4:22", actor: expectedActor("4.4.4.4"), err: false}},
 	}
 	for _, tt := range tests {
 		lastAddrDialed = "not dialed"
