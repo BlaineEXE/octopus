@@ -1,4 +1,4 @@
-export NUM_HOSTS ?= 3
+export NUM_HOSTS ?= 1
 export HOST_BASENAME ?= octopus-test-host
 export RUNNER_NAME ?= octopus-test-runner
 

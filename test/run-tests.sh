@@ -25,8 +25,8 @@ function run_test () { # 1) test_name
 }
 
 run_test 01_config.sh
-run_test 02_run.sh
-run_test 03_copy.sh
+# run_test 02_run.sh
+# run_test 03_copy.sh
 
 # # stop the first test host to simulate a node being unreachable
 # # host can't be restarted except by creating a new one, so make sure to do this very last
