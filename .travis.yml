@@ -1,0 +1,9 @@
+language: go
+go:
+  - "1.11"
+
+# dep needed to make vendor dir
+before_install:
+  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+
+script: make test test.integration
