@@ -2,6 +2,8 @@ Octopus
 =========
 Octopus is a commandline tool for running the same command on multiple remote hosts in parallel.
 
+[![Build Status](https://travis-ci.com/BlaineEXE/octopus.svg?branch=master)](https://travis-ci.com/BlaineEXE/octopus)
+
 Theory
 --------
 Octopus is a simple tool inspired by `pdsh`'s ability to execute commands on multiple hosts in
