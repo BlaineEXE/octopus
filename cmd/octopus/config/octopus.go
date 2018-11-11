@@ -40,6 +40,7 @@ func TrainOctopus() *octopus.Octopus {
 	identityFile := getAbsFilePath(viper.GetString("identity-file"))
 
 	remoteConnector.AddIdentityFile(identityFile)
+	remoteConnector.Port(uint16(viper.GetInt("port")))
 
 	return octopus.New(
 		remoteConnector,

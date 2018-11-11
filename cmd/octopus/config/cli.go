@@ -66,13 +66,15 @@ func init() {
 	// Load the config file at cobra initialization
 	cobra.OnInitialize(loadConfig)
 
-	// Persistent top-level flags, which
-	OctopusCmd.PersistentFlags().StringP("host-groups", "g", "",
-		"comma-separated list of host groups; the command will be run on each host in every group")
+	// Persistent top-level flags
 	OctopusCmd.PersistentFlags().StringP("groups-file", "f", defaultGroupsFile,
 		"file which defines groups of remote hosts available for execution")
+	OctopusCmd.PersistentFlags().StringP("host-groups", "g", "",
+		"comma-separated list of host groups; the command will be run on each host in every group")
 	OctopusCmd.PersistentFlags().StringP("identity-file", "i", "$HOME/.ssh/id_rsa",
 		"(ssh) file from which the identity (private key) for public key authentication is read")
+	OctopusCmd.PersistentFlags().Uint16P("port", "p", 22,
+		"(ssh) port on which to connect to hosts")
 	OctopusCmd.PersistentFlags().BoolP("verbose", "v", false,
 		"print additional information about octopus progress")
 
