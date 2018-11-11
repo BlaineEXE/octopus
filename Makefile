@@ -37,3 +37,4 @@ install: dep
 clean:
 	rm -rf $(OUTPUT_DIR)
 	rm -rf vendor/
+	@ $(MAKE) --directory test teardown

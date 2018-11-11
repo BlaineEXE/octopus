@@ -1,15 +1,20 @@
-FROM opensuse/leap:15.0
+# FROM opensuse/leap:15.0
+FROM ubuntu:bionic
 
 # Test hosts must run an ssh server daemon
-RUN zypper --gpg-auto-import-keys --non-interactive install \
-        net-tools \
-        openssh
+# RUN zypper --gpg-auto-import-keys --non-interactive install \
+#         net-tools \
+#         openssh
+RUN apt-get update -y && \
+    apt-get install -y net-tools openssh-server openssh-sftp-server openssh-client
 
 COPY .ssh/* /root/.ssh/
 COPY .ssh/id_rsa /etc/ssh/ssh_host_rsa_key
 RUN chmod 600 /root/.ssh/id_rsa /root/.ssh/authorized_keys /etc/ssh/ssh_host_rsa_key
 
-CMD [ "/usr/sbin/sshd", "-D" ]
+RUN mkdir -p /var/run/sshd
+
+CMD [ "/usr/sbin/sshd", "-D", "-e" ]
 
 # The integration tests we'll run from the test container as 'tester' user
 RUN useradd --create-home tester

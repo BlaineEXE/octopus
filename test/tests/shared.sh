@@ -49,6 +49,16 @@ function assert_success () { # 1) test name  ...) command
   assert_retcode "$1" 0 "${@:2}"
 }
 
+function assert_failure () {
+  echo "  $1"
+  if ! "${@:2}" &> /tmp/output ; then
+    pass "${@:2}"
+  else
+    cat /tmp/output
+    fail "${@:2}"
+  fi
+}
+
 function assert_output_count () { # 1) output desired 2) desired count
   if [ "$(grep --count "$1" /tmp/output)" == "$2" ]; then
     pass "'$1' is in output exactly $2 times"
