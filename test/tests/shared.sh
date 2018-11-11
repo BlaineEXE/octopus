@@ -34,26 +34,6 @@ function fail () {
   echo ''
 }
 
-function assert_success () { # 1) test name  ...) command
-  echo "  $1"
-  if "${@:2}" &> /tmp/output ; then
-    pass "${@:2}"
-  else
-    cat /tmp/output
-    fail "${@:2}"
-  fi
-}
-
-function assert_failure () { # 1) test name  ...) command
-  echo "  $1"
-  if ! "${@:2}" &> /tmp/output ; then
-    pass "${@:2}"
-  else
-    cat /tmp/output
-    fail "${@:2}"
-  fi
-}
-
 function assert_retcode () { # 1) test name 2) retcode  ...) command
   echo "  $1"
   "${@:3}" &> /tmp/output
@@ -63,6 +43,10 @@ function assert_retcode () { # 1) test name 2) retcode  ...) command
     cat /tmp/output
     fail "${@:3}"
   fi
+}
+
+function assert_success () { # 1) test name  ...) command
+  assert_retcode "$1" 0 "${@:2}"
 }
 
 function assert_output_count () { # 1) output desired 2) desired count

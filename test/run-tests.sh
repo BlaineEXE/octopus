@@ -28,6 +28,12 @@ run_test 01_config.sh
 run_test 02_run.sh
 run_test 03_copy.sh
 
+# stop the first test host to simulate a node being unreachable
+# host can't be restarted except by creating a new one, so make sure to do this very last
+host=$HOST_BASENAME-1
+docker stop "$host" 1> /dev/null
+run_test 04_node-offline.sh
+
 echo "Test suites run: $num_suites"
 echo "Test failures: $num_failures"
 echo ""
