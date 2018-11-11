@@ -129,28 +129,3 @@ func TestFileCopier(t *testing.T) {
 		})
 	}
 }
-
-// func compareLists(t *testing.T, expected []string, got []string, name string) {
-// 	g := make([]string, len(got))
-// 	copy(g, got)
-// 	var err error
-// 	for _, e := range expected {
-// 		g, err = removeFromList(e, g)
-// 		//fmt.Println(g)
-// 		if err != nil {
-// 			t.Errorf("%s: %+v", name, err)
-// 		}
-// 	}
-// 	if len(g) > 0 {
-// 		t.Errorf("%s has extraneous items: %+v", name, g)
-// 	}
-// }
-
-// func removeFromList(key string, list []string) ([]string, error) {
-// 	for i, s := range list {
-// 		if s == key {
-// 			return append(list[:i], list[i+1:]...), nil // remove element & return new list
-// 		}
-// 	}
-// 	return list, fmt.Errorf("%s not in list %+v", key, list)
-// }

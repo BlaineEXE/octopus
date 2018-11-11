@@ -12,6 +12,7 @@ import (
 // A Connector is able to make SSH connections to remote hosts.
 type Connector struct {
 	clientConfig *ssh.ClientConfig
+	port         uint16
 }
 
 // NewConnector returns a new SSH connector.
@@ -22,6 +23,7 @@ func NewConnector() *Connector {
 			Auth:            []ssh.AuthMethod{},
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		},
+		port: 22,
 	}
 }
 
@@ -44,6 +46,12 @@ func (c *Connector) AddIdentityFile(filePath string) error {
 	return nil
 }
 
+// Port sets the port on which remote connections will be made to hosts. The default port is 22.
+func (c *Connector) Port(p uint16) error {
+	c.port = p
+	return nil
+}
+
 var dialHost = ssh.Dial
 
 // Connect connects to the host via ssh with the options that have been previously set and returns
@@ -54,7 +62,7 @@ func (c *Connector) Connect(host string) (remote.Actor, error) {
 			"cannot connect to host %s. no ssh authorization methods have been specified", host)
 	}
 	logger.Info.Println("dialing host:", host)
-	client, err := dialHost("tcp", fmt.Sprintf("%s:22", host), c.clientConfig)
+	client, err := dialHost("tcp", fmt.Sprintf("%s:%d", host, c.port), c.clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial host %s. %+v", host, err)
 	}

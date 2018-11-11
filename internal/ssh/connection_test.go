@@ -95,22 +95,17 @@ func TestConnector_Connect(t *testing.T) {
 	stubConnector.AddIdentityFile(parsableKeyfile)
 
 	stubClient := &ssh.Client{} // stub dialer always returns this client
-	var lastAddrDialed string   // for checking that the right address was dialed
 
-	runtimeDialHost := dialHost
-	defer func() { dialHost = runtimeDialHost }()
-	stubDialer := func(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	var lastAddrDialed string // for checking that the right address was dialed
+	failDial := true
+	dialHost = func(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
 		lastAddrDialed = addr
+		if failDial {
+			return nil, fmt.Errorf("test dial error")
+		}
 		return stubClient, nil
 	}
-	failDialer := func(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
-		stubDialer(network, addr, config)
-		return nil, fmt.Errorf("test dial error")
-	}
 
-	expectedAddr := func(host string) string {
-		return fmt.Sprintf(host + ":22") // only connects to port 22 currently
-	}
 	// sort of tests newActor as well
 	expectedActor := func(host string) *Actor {
 		return &Actor{
@@ -132,20 +127,24 @@ func TestConnector_Connect(t *testing.T) {
 		name      string
 		connector *Connector
 		host      string // arg
-		sshDialer func(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error)
+		failDial  bool
 		wants     wants
 	}{
-		{"successful connection", stubConnector, "1.1.1.1", stubDialer, wants{
-			addrDialed: expectedAddr("1.1.1.1"), actor: expectedActor("1.1.1.1"), err: false}},
-		{"fail to dial", stubConnector, "2.2.2.2", failDialer, wants{
-			addrDialed: expectedAddr("2.2.2.2"), actor: nil, err: true}},
-		{"connector w/o id file", NewConnector(), "not dialed", stubDialer, wants{
+		{"successful connection", stubConnector, "1.1.1.1", false, wants{
+			addrDialed: "1.1.1.1:22", actor: expectedActor("1.1.1.1"), err: false}},
+		{"fail to dial", stubConnector, "2.2.2.2", true, wants{
+			addrDialed: "2.2.2.2:22", actor: nil, err: true}},
+		{"connector w/o id file", NewConnector(), "not dialed", false, wants{
 			addrDialed: "not dialed", actor: nil, err: true}},
+		{"connect with a different port",
+			func() (c *Connector) { c = new(Connector); *c = *stubConnector; c.Port(2222); return }(),
+			"3.3.3.3", false, wants{
+				addrDialed: "3.3.3.3:2222", actor: expectedActor("3.3.3.3"), err: false}},
 	}
 	for _, tt := range tests {
 		lastAddrDialed = "not dialed"
 		t.Run(tt.name, func(t *testing.T) {
-			dialHost = tt.sshDialer
+			failDial = tt.failDial
 			a, err := tt.connector.Connect(tt.host)
 			if (err != nil) != tt.wants.err {
 				t.Errorf("Connector.Connect() error = %v, want error %v", err, tt.wants.err)
