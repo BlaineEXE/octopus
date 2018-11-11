@@ -4,6 +4,13 @@ Octopus is a commandline tool for running the same command on multiple remote ho
 
 [![Build Status](https://travis-ci.com/BlaineEXE/octopus.svg?branch=master)](https://travis-ci.com/BlaineEXE/octopus)
 
+Known Issues
+--------------
+There is a bug in openSUSE Leap 15.0 which likely affects all openSUSE distributions where octopus
+will randomly fail to be able to execute on remote hosts as non-root users. Executing as the `root`
+user seems to work appropriately.</br>
+https://bugzilla.opensuse.org/show_bug.cgi?id=1115550
+
 Theory
 --------
 Octopus is a simple tool inspired by `pdsh`'s ability to execute commands on multiple hosts in
