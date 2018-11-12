@@ -1,3 +1,5 @@
+include build/makelib.mk
+
 # Entering/Leaving directory messages are annoying and not very useful
 MAKEFLAGS += --no-print-directory
 
@@ -16,23 +18,24 @@ LDFLAGS += -X $(GO_IMPORT_ROOT)/internal/version.Version=$(VERSION)
 
 ALL_BUILDFLAGS := $(BUILDFLAGS) -ldflags '$(LDFLAGS)'
 
-dep:
-	dep ensure
+.PHONY: vendor
+vendor: $(DEP)
+	@ $(DEP) ensure
 
-build: dep
-	go build $(ALL_BUILDFLAGS) -o $(OUTPUT_DIR)/octopus $(GO_BUILD_TARGET)
+build: vendor $(GO)
+	$(GO) build $(ALL_BUILDFLAGS) -o $(OUTPUT_DIR)/octopus $(GO_BUILD_TARGET)
 	@ echo "Binary size: $$(ls -sh $(OUTPUT_DIR)/octopus | cut -d' ' -f 1)"
 
-test: dep
-	go test -cover ./cmd/... ./internal/...
+test: vendor $(GO)
+	$(GO) test -cover ./cmd/... ./internal/...
 
-test.integration: dep build
+test.integration: vendor build
 	@ mkdir -p test/_output
 	@ cp _output/octopus test/_output/octopus
 	@ $(MAKE) --directory test all
 
-install: dep
-	go install $(ALL_BUILDFLAGS) $(GO_BUILD_TARGET)
+install: vendor $(GO)
+	$(GO) install $(ALL_BUILDFLAGS) $(GO_BUILD_TARGET)
 
 clean:
 	rm -rf $(OUTPUT_DIR)
