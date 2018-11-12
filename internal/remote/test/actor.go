@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 )
 
 // MockRemoteActor is a reusable mock remote.Actor to be used for testing.
@@ -28,6 +29,9 @@ type MockRemoteActor struct {
 // shortcut for bytes.NewBufferString
 var bs = bytes.NewBufferString
 
+// Actor may be called in parallel
+var actorMutex = sync.Mutex{}
+
 // RunCommand is a mock function that appends each command to Commands.
 // It will return Hostname if the command is "hostname", or an error if HostnameError is true.
 // It will always return data on stdout and stderr in the form below where command is the command
@@ -35,6 +39,8 @@ var bs = bytes.NewBufferString
 // true, in which case err:
 //   <command>: <stdout|stderr> <ok|err>
 func (m *MockRemoteActor) RunCommand(command string) (stdout, stderr *bytes.Buffer, err error) {
+	actorMutex.Lock()
+	defer actorMutex.Unlock()
 	app(&m.Commands, command)
 
 	if command == "hostname" {
@@ -65,6 +71,8 @@ func ExpectedCommandOutput(command string, err bool) (stdout, stderr string) {
 // CreateRemoteDir is a mock function that appends each remote dir path to DirCreates.
 // It will return an error after it has been called CreateDirErrorAfter number of times.
 func (m *MockRemoteActor) CreateRemoteDir(dirPath string) error {
+	actorMutex.Lock()
+	defer actorMutex.Unlock()
 	app(&m.DirCreates, dirPath)
 
 	if m.CreateDirErrorOn != "" && strings.Contains(dirPath, m.CreateDirErrorOn) {
@@ -77,6 +85,8 @@ func (m *MockRemoteActor) CreateRemoteDir(dirPath string) error {
 // CopyFileToRemote is a mock function that appends each remote file path to FileCopies.
 // It will return an error after it has been called CopyFileErrorAfter number of times.
 func (m *MockRemoteActor) CopyFileToRemote(localSource *os.File, remoteFilePath string) error {
+	actorMutex.Lock()
+	defer actorMutex.Unlock()
 	app(&m.FileCopies, remoteFilePath)
 
 	if m.CopyFileErrorOn != "" && strings.Contains(remoteFilePath, m.CopyFileErrorOn) {
@@ -89,6 +99,8 @@ func (m *MockRemoteActor) CopyFileToRemote(localSource *os.File, remoteFilePath 
 // Close is a mock function that increments CloseCalled each time it is called.
 // It does not return an error.
 func (m *MockRemoteActor) Close() error {
+	actorMutex.Lock()
+	defer actorMutex.Unlock()
 	m.CloseCalled++
 	return nil
 }
