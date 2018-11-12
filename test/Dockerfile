@@ -2,6 +2,9 @@ FROM opensuse/leap:15.0
 # FROM ubuntu:bionic
 
 # Test hosts must run an ssh server daemon
+RUN zypper addrepo --gpgcheck-allow-unsigned \
+        https://download.opensuse.org/repositories/home:/vitezslav_cizek:/branches:/network/openSUSE_Leap_15.0/ \
+        openssh-fix
 RUN zypper --gpg-auto-import-keys --non-interactive install \
         net-tools \
         openssh
