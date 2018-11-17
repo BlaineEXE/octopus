@@ -17,7 +17,7 @@ var getAddrsFromGroupsFile = func(hostGroups []string, groupsFile string) ([]str
 
 	f, err := os.Open(groupsFile)
 	if err != nil {
-		return []string{}, fmt.Errorf("could not load groups file %s: %+v", groupsFile, err)
+		return []string{}, fmt.Errorf("could not load groups file: %+v", err)
 	}
 
 	fileGroups, err := getAllGroupsInFile(f)

@@ -34,7 +34,7 @@ func (c *Connector) AddIdentityFile(filePath string) error {
 
 	key, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return fmt.Errorf("unable to read identity file %s. %+v", filePath, err)
+		return err
 	}
 
 	signer, err := ssh.ParsePrivateKey(key)

@@ -29,7 +29,10 @@ var RunCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger.Info.Println("Running command: ", args[0])
 
-		o := config.TrainOctopus()
+		o, err := config.TrainOctopus()
+		if err != nil {
+			return err
+		}
 
 		numErrs, err := o.Do(tentacle.CommandRunner(args[0]))
 		if err != nil {

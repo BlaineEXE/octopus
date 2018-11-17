@@ -20,6 +20,15 @@ assert_success "with --groups-file arg" \
 assert_success "with -f arg" octopus -g all -f "$HOME/work/groups-file" run hostname
 mv "$HOME/work/groups-file" "$GROUPFILE"
 
+# test unreadable config files
+mkdir -p "$HOME/work"
+touch "$HOME/work/unreadable-file"
+chmod 333 "$HOME/work/unreadable-file" # write-only
+assert_failure "with unreadable identity file" \
+  octopus -g all -i "$HOME/work/unreadable-file" run hostname
+assert_failure "with unreadable groups file" \
+  octopus -g all -f "$HOME/work/unreadable-file" run hostname
+
 # Start a second ssh daemon on hosts listening on port 3022 to test connecting to different port
 assert_success "with ssh daemon running on port 3022" \
   octopus -g all run '/usr/sbin/sshd -p 3022'
