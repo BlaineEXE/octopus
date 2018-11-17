@@ -30,7 +30,10 @@ var CopyCmd = &cobra.Command{
 		remoteDir := args[n-1]
 		logger.Info.Println("copying", len(localSources), "local sources", localSources, "to remote dir", remoteDir)
 
-		o := config.TrainOctopus()
+		o, err := config.TrainOctopus()
+		if err != nil {
+			return err
+		}
 
 		opts := tentacle.NewCopyFileOptions(viper.GetBool("recursive"))
 		numErrs, err := o.Do(tentacle.FileCopier(localSources, remoteDir, opts))

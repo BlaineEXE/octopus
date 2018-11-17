@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -24,12 +25,16 @@ var remoteConnector remote.Connector = ssh.NewConnector()
 // present in this function.
 // If a required input for an octopus action is not present, this function will print CLI usage
 // information and exit the program with a failure code.
-func TrainOctopus() *octopus.Octopus {
+func TrainOctopus() (*octopus.Octopus, error) {
 	logger.Info.Println("Config file used: ", viper.ConfigFileUsed())
 	logger.Info.Println("Parsing global flags")
 
 	rawHostGroups := viper.GetString("host-groups")
 	if rawHostGroups == "" {
+		// host-groups is not required for 'version' command; only commands that require an octopus
+		// to be created. Do a manual check here so that Cobra doesn't check 'version' for
+		// host-groups. Do not return an error here, but instead print to stderr and exit nonzero
+		// to control what the output looks like more exactly.
 		os.Stderr.WriteString("ERROR: Required value 'host-groups' was not set in the config or in commandline\n")
 		os.Stderr.WriteString(OctopusCmd.UsageString())
 		os.Exit(-1)
@@ -39,15 +44,21 @@ func TrainOctopus() *octopus.Octopus {
 	groupsFile := getAbsFilePath(viper.GetString("groups-file"))
 	identityFile := getAbsFilePath(viper.GetString("identity-file"))
 
-	remoteConnector.AddIdentityFile(identityFile)
-	remoteConnector.Port(uint16(viper.GetInt("port")))
-	remoteConnector.User(viper.GetString("user"))
+	if err := remoteConnector.AddIdentityFile(identityFile); err != nil {
+		return nil, fmt.Errorf("could not add identity file: %+v", err)
+	}
+	if err := remoteConnector.Port(uint16(viper.GetInt("port"))); err != nil {
+		return nil, fmt.Errorf("could not change port: %+v", err) // ssh always return nil here
+	}
+	if err := remoteConnector.User(viper.GetString("user")); err != nil {
+		return nil, fmt.Errorf("could not change user: %+v", err) // ssh always return nil here
+	}
 
 	return octopus.New(
 		remoteConnector,
 		hostGroups,
 		groupsFile,
-	)
+	), nil
 }
 
 func getAbsFilePath(path string) string {
