@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/BlaineEXE/octopus/internal/ssh"
+
 	"github.com/BlaineEXE/octopus/internal/tentacle"
 
 	"github.com/spf13/cobra"
@@ -35,6 +37,11 @@ var CopyCmd = &cobra.Command{
 			return err
 		}
 
+		ssh.UserSFTPOptions.BufferSizeKib = uint16(viper.GetInt("buffer-size"))
+		ssh.UserSFTPOptions.RequestsPerFile = uint16(viper.GetInt("requests-per-file"))
+		logger.Info.Println("SFTP buffer size (kib):", ssh.UserSFTPOptions.BufferSizeKib)
+		logger.Info.Println("SFTP requests per file:", ssh.UserSFTPOptions.RequestsPerFile)
+
 		opts := tentacle.NewCopyFileOptions(viper.GetBool("recursive"))
 		numErrs, err := o.Do(tentacle.FileCopier(localSources, remoteDir, opts))
 		if err != nil {
@@ -47,6 +54,10 @@ var CopyCmd = &cobra.Command{
 
 func init() {
 	CopyCmd.Flags().BoolP("recursive", "r", false, "recurse into subdirectories and copy all files")
+	CopyCmd.Flags().Uint16P("buffer-size", "B", 32,
+		"in kibibits (kib), maximum buffer (chunk) size for copying files (default is "+
+			"guaranteed-to-work max for all SFTP clients, OpenSSH max is 256 kib)")
+	CopyCmd.Flags().Uint16P("requests-per-file", "R", 64, "max number of concurrent requests per file")
 
 	viper.BindPFlags(CopyCmd.Flags())
 }

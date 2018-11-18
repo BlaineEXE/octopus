@@ -61,5 +61,41 @@ assert_output_count "$(get_md5sum work/dirA/fileAA)" 1
 assert_output_count "$(get_md5sum work/dirA/fileAB)" 1
 assert_retcode '  and no files on rest of nodes' 2 octopus -g all run 'ls /tmp/6'
 
+#
+# SFTP copy throughput settings
+# There is a possiblility this might fail unexpectedly, but I ran this series of tests over 100
+# times in a row without random failures.
+#
+paths="work/file* work/dirA"
+
+# default buffer = 32kib, requests per file = 64
+start_time=$(date +%s%N) # nanoseconds
+assert_success "baseline copy speed" octopus -g all copy -r $paths /tmp/7
+end_time=$(date +%s%N)
+baseline_time=$(( end_time - start_time ))
+
+start_time=$(date +%s%N)
+assert_success "slow copy" octopus -g all copy -r $paths /tmp/8 --buffer-size 1 --requests-per-file 1
+end_time=$(date +%s%N)
+slow_time=$(( end_time - start_time ))
+
+start_time=$(date +%s%N)
+assert_success "medium copy" octopus -g all copy -r $paths /tmp/9 --buffer-size 16 --requests-per-file 32
+end_time=$(date +%s%N)
+medium_time=$(( end_time - start_time ))
+
+# slow copy should be ~2048 times slower, but there is also the overhead of Octopus's processing,
+# so the best we can say is that this should be slower
+if [[ ! $slow_time -gt $medium_time ]]; then
+  fail "slow time $slow_time should be greater than medium time $medium_time"
+else
+  pass "slow time $slow_time is less than medium time $medium_time"
+fi
+if [[ ! $medium_time -gt $baseline_time ]]; then
+  fail "medium time $medium_time should be greater than baseline time $baseline_time"
+else
+  pass "medium time $medium_time is greater than baseline time $baseline_time"
+fi
+
 # Remove all the files we wrote from the test hosts
 octopus -g all run 'rm -rf /tmp/*' 1> /dev/null

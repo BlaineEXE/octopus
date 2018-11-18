@@ -21,7 +21,7 @@ func (a *Actor) CreateRemoteDir(dirPath string) error {
 	errMsg := "failed to create remote dir " + dirPath + ". %+v"
 	c, err := a.sftpClient()
 	if err != nil {
-		return fmt.Errorf(errMsg, err)
+		return err
 	}
 	if fi, err := statRemote(c, dirPath); err == nil {
 		if !fi.IsDir() {
@@ -48,20 +48,19 @@ var closeRemoteFile = func(f *sftp.File) error {
 
 // CopyFileToRemote copies the file to the Actor's remote host at the remote file path.
 func (a *Actor) CopyFileToRemote(localSource *os.File, remoteFilePath string) error {
-	errMsg := "failed to copy file to remote at " + remoteFilePath + ". %+v"
 	c, err := a.sftpClient()
 	if err != nil {
-		return fmt.Errorf(errMsg, err)
+		return err
 	}
 
 	d, err := createRemote(c, remoteFilePath)
 	if err != nil {
-		return fmt.Errorf(errMsg, err)
+		return fmt.Errorf("failed to create remote file handler at path %s. %+v", remoteFilePath, err)
 	}
 	defer closeRemoteFile(d)
 
 	if _, err := writeToRemote(d, localSource); err != nil {
-		return fmt.Errorf(errMsg, err)
+		return fmt.Errorf("failed to write to remote file %s. %+v", remoteFilePath, err)
 	}
 
 	return nil

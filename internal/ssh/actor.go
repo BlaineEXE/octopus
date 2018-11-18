@@ -10,10 +10,22 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+type SFTPOptions struct {
+	BufferSizeKib   uint16
+	RequestsPerFile uint16
+}
+
+// UserSFTPOptions changes how the SFTP subsystem will be configured for copying files.
+var UserSFTPOptions = SFTPOptions{
+	BufferSizeKib:   32,
+	RequestsPerFile: 64,
+}
+
 func newActor(host string, s *ssh.Client) *Actor {
 	return &Actor{
 		host:            host,
 		sshClient:       s,
+		sftpOptions:     UserSFTPOptions,
 		_sftpCreateOnce: sync.Once{},
 		closers:         []io.Closer{s},
 	}
@@ -21,8 +33,9 @@ func newActor(host string, s *ssh.Client) *Actor {
 
 // An Actor is able to perform actions on a remote via an SSH connection established to the host.
 type Actor struct {
-	host      string
-	sshClient *ssh.Client
+	host        string
+	sshClient   *ssh.Client
+	sftpOptions SFTPOptions
 
 	// SFTP client creation is done lazily if files are to be copied, and only once for each actor
 	_sftpClient     *sftp.Client
@@ -39,11 +52,15 @@ var newSFTPClient = sftp.NewClient
 func (a *Actor) sftpClient() (*sftp.Client, error) {
 	a._sftpCreateOnce.Do(func() {
 		logger.Info.Println("establishing SFTP connection to host:", a.host)
-		sftp, err := newSFTPClient(a.sshClient)
+		sftp, err := newSFTPClient(a.sshClient,
+			sftp.MaxPacketUnchecked(int(a.sftpOptions.BufferSizeKib)*1024), // also convert kib to bytes
+			sftp.MaxConcurrentRequestsPerFile(int(a.sftpOptions.RequestsPerFile)))
 		a._sftpClient = sftp
 		a._sftpClientErr = err
 		if err == nil {
 			a.closers = append(a.closers, sftp) // make sure SFTP client is closed on Actor.Close
+		} else {
+			err = fmt.Errorf("failed to start SFTP subsystem. %+v", err)
 		}
 	})
 	return a._sftpClient, a._sftpClientErr
