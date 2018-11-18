@@ -115,6 +115,7 @@ func TestConnector_Connect(t *testing.T) {
 		return &Actor{
 			host:            host,
 			sshClient:       stubClient,
+			sftpOptions:     SFTPOptions{BufferSizeKib: 32, RequestsPerFile: 64},
 			_sftpCreateOnce: sync.Once{},             // must init the sync.Once for SFTP
 			_sftpClient:     nil,                     // do not create an sftp client on SSH connect
 			_sftpClientErr:  nil,                     // do not report SFTP client err on SSH connect

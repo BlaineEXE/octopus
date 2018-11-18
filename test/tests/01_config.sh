@@ -40,6 +40,7 @@ assert_success "  ... with -p arg" octopus -g all -p 3022 run hostname
 assert_success "  and finally killing ssh daemon on port 3022" \
   octopus -g all run 'pkill --full "/usr/sbin/sshd -p 3022"'
 
+# alternate user
 assert_success "with default user (root)" octopus -g all run 'id --user --name'
 assert_output_count "root" $NUM_HOSTS
 assert_failure "with invalid user" octopus -g all -u 'invalid' run 'ls'
