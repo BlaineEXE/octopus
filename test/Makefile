@@ -24,6 +24,8 @@ run:
 
 teardown:
 	@ echo "Tearing down test hosts..."
+	@ docker kill $(RUNNER_NAME) || true
+	@ docker rm $(RUNNER_NAME) || true
 	@ for i in $$(seq 1 $(NUM_HOSTS)); do \
 		host=$(HOST_BASENAME)-$$i ; \
 		docker stop $$host ; \

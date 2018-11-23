@@ -9,7 +9,6 @@ import (
 
 	"github.com/BlaineEXE/octopus/internal/remote"
 	remotetest "github.com/BlaineEXE/octopus/internal/remote/test"
-	"github.com/BlaineEXE/octopus/internal/util/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -102,6 +101,8 @@ func TestOctopus_Do(t *testing.T) {
 			}
 			tt.remoteConnector.ReturnActor = &remotetest.MockRemoteActor{}
 			tt.remoteConnector.ReturnActor.HostnameError = tt.failHostname
+			tt.remoteConnector.HostConnects = []string{}
+			tt.remoteConnector.HostConnectFails = []string{}
 			failActions = tt.failActions
 			failGetAddrsFromGroupsFile = tt.failGetAddrsFromGroupsFile
 
@@ -115,10 +116,8 @@ func TestOctopus_Do(t *testing.T) {
 				assert.Equal(t, tt.wants.numHostErrors, gotNumHostErrors)
 			}
 
-			connects := remotetest.Clear(&tt.remoteConnector.HostConnects)
-			connectFails := remotetest.Clear(&tt.remoteConnector.HostConnectFails)
-			testutil.CompareStringLists(t, tt.wants.connects, connects, "connects")
-			testutil.CompareStringLists(t, tt.wants.connectFails, connectFails, "connect fails")
+			assert.ElementsMatch(t, tt.wants.connects, tt.remoteConnector.HostConnects, "connects")
+			assert.ElementsMatch(t, tt.wants.connectFails, tt.remoteConnector.HostConnectFails, "connect fails")
 			// Connector should return all expected actors except those that fail connection
 			successfulConns := len(tt.wants.connects) - len(tt.wants.connectFails)
 			assert.Equal(t, successfulConns, len(actorsCalled))

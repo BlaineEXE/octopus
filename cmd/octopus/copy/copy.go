@@ -15,17 +15,30 @@ import (
 	"github.com/BlaineEXE/octopus/internal/logger"
 )
 
-const (
-	aboutText = "Copy local files to a dir on remote hosts."
-)
-
 // CopyCmd is the 'copy' command definition which copies local files to remote hosts.
 var CopyCmd = &cobra.Command{
 	// TODO: Add optional '--to' flag
 	Use:   "copy [flags] LOCAL_SOURCE_PATHS... REMOTE_DEST_DIR",
-	Short: aboutText,
-	Long:  fmt.Sprintf("\n%s", aboutText),
-	Args:  cobra.MinimumNArgs(2),
+	Short: "Copy local files to a dir on remote hosts.",
+	Long: `
+  Copy local files and/or directories to a given directory on remote hosts. If
+  the destination directory does not exist on remote hosts, it (and any
+  nonexistent parents) will be created with permissions 0644. Files specified
+  individually will be copied with the same permissions as exist locally to the
+  destination directory directly. Directories specified will be copied only if
+  the 'recursive|r' argument is given, and both permissions and the file tree
+  layout within the dir will be copied to the destination dir.
+
+  Copy uses SSH's SFTP subsystem under the hood, and some sftp arguments are
+  reflected in Octopus's copy arguments. These arguments are marked in the help
+  text with "(sftp)".
+   - The default buffer size (--buffer-size|-B) is the guaranteed-to-work
+     maximum for all SFTP connections. OpenSSH's maximum is 256 kib but less in
+     practice because there is also overhead for TCP packet headers.
+   - Octopus's (--requests-per-file|-R) differs somewhat from sftp's -R option
+     in that it is a 'per-file' argument in Octopus.
+`,
+	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		n := len(args)
 		localSources := args[:n-1]
@@ -55,9 +68,8 @@ var CopyCmd = &cobra.Command{
 func init() {
 	CopyCmd.Flags().BoolP("recursive", "r", false, "recurse into subdirectories and copy all files")
 	CopyCmd.Flags().Uint16P("buffer-size", "B", 32,
-		"in kibibits (kib), maximum buffer (chunk) size for copying files (default is "+
-			"guaranteed-to-work max for all SFTP clients, OpenSSH max is 256 kib)")
-	CopyCmd.Flags().Uint16P("requests-per-file", "R", 64, "max number of concurrent requests per file")
+		"(sftp) in kibibits (kib), maximum buffer (chunk) size for copying files")
+	CopyCmd.Flags().Uint16P("requests-per-file", "R", 64, "(sftp) max number of concurrent requests per file")
 
 	viper.BindPFlags(CopyCmd.Flags())
 }

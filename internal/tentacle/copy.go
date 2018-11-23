@@ -45,7 +45,7 @@ func FileCopier(
 	opts *CopyFileOptions,
 ) remote.Action {
 	return func(a remote.Actor) (stdout, stderr *bytes.Buffer, err error) {
-		if err = a.CreateRemoteDir(remoteDestDir); err != nil {
+		if err = a.CreateRemoteDir(remoteDestDir, os.FileMode(0644)); err != nil {
 			return
 		}
 
@@ -122,14 +122,14 @@ func doCopyDirOrFile(
 		fullDest := filepath.Join(destDir, relPath)
 		if info.IsDir() {
 			// Source base is a dir, and we want to include this base dir on the host.
-			if err := a.CreateRemoteDir(fullDest); err != nil {
+			if err := a.CreateRemoteDir(fullDest, info.Mode().Perm()); err != nil {
 				errors <- err
 				// don't double report this err in 'error walking local dir ...'
 				return filepath.SkipDir
 			}
 		} else {
 			wg.Add(1)
-			go doCopyFile(a, pth, fullDest, wg, errors)
+			go doCopyFile(a, pth, fullDest, info.Mode().Perm(), wg, errors)
 		}
 
 		return nil
@@ -143,6 +143,7 @@ func doCopyDirOrFile(
 func doCopyFile(
 	a remote.Actor,
 	sourcePath, destPath string,
+	mode os.FileMode,
 	wg *sync.WaitGroup, errors chan<- error,
 ) {
 	defer wg.Done()
@@ -156,7 +157,7 @@ func doCopyFile(
 	}
 	defer s.Close()
 
-	if err := a.CopyFileToRemote(s, destPath); err != nil {
+	if err := a.CopyFileToRemote(s, destPath, mode); err != nil {
 		errors <- fmt.Errorf("failed to copy file %s to remote at %s. %+v", sourcePath, destPath, err)
 		return
 	}
