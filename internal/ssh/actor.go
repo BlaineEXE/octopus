@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// SFTPOptions is defines options for SSH's SFTP subsystem.
 type SFTPOptions struct {
 	BufferSizeKib   uint16
 	RequestsPerFile uint16

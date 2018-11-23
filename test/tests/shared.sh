@@ -60,7 +60,7 @@ function assert_failure () {
 }
 
 function assert_output_count () { # 1) output desired 2) desired count
-  if [ "$(grep --count "$1" /tmp/output)" == "$2" ]; then
+  if [ "$(grep --count --regexp "$1" /tmp/output)" == "$2" ]; then
     pass "'$1' is in output exactly $2 times"
   else
     cat /tmp/output

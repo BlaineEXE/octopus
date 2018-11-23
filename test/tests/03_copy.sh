@@ -10,7 +10,7 @@ mkdir work/dirB
 mkdir work/dirWO && chmod 333 work/dirWO # write-only dir
 head --bytes=1K /dev/urandom > work/fileA
 head --bytes=2K /dev/urandom > work/fileB
-head --bytes=1M /dev/urandom > work/dirA/fileAA
+head --bytes=1M /dev/urandom > work/dirA/fileAA && chmod 600 work/dirA/fileAA # perms 0600
 head --bytes=1K /dev/urandom > work/dirA/fileAB
 head --bytes=3K /dev/urandom > work/dirB/fileBA
 head --bytes=2K /dev/urandom > work/dirB/fileBWO && chmod -r work/dirB/fileBWO # write-only file
@@ -40,6 +40,8 @@ assert_success 'with successful recursive dir copy to all nodes' \
 assert_success '  and file md5sums match' octopus -g all run 'md5sum /tmp/3/dirA/*'
 assert_output_count "$(get_md5sum work/dirA/fileAA)" $NUM_HOSTS
 assert_output_count "$(get_md5sum work/dirA/fileAB)" $NUM_HOSTS
+assert_success '  and fileAA has perms 0600' octopus -g all run 'ls -l /tmp/3/dirA/fileAA'
+assert_output_count '-rw-------' $NUM_HOSTS
 
 assert_retcode 'with failure to copy unreadable file in readable dir' $NUM_HOSTS \
   octopus -g all copy -r work/dirB /tmp/4
@@ -63,8 +65,8 @@ assert_retcode '  and no files on rest of nodes' 2 octopus -g all run 'ls /tmp/6
 
 #
 # SFTP copy throughput settings
-# There is a possiblility this might fail unexpectedly, but I ran this series of tests over 100
-# times in a row without random failures.
+# It is possible that this test could report a false failure due to fluctuations in network speeds,
+# but in testing it has never happened.
 #
 paths="work/file* work/dirA"
 
@@ -79,23 +81,16 @@ assert_success "slow copy" octopus -g all copy -r $paths /tmp/8 --buffer-size 1 
 end_time=$(date +%s%N)
 slow_time=$(( end_time - start_time ))
 
-start_time=$(date +%s%N)
-assert_success "medium copy" octopus -g all copy -r $paths /tmp/9 --buffer-size 16 --requests-per-file 32
-end_time=$(date +%s%N)
-medium_time=$(( end_time - start_time ))
-
 # slow copy should be ~2048 times slower, but there is also the overhead of Octopus's processing,
 # so the best we can say is that this should be slower
-if [[ ! $slow_time -gt $medium_time ]]; then
-  fail "slow time $slow_time should be greater than medium time $medium_time"
+if [[ ! $slow_time -gt $baseline_time ]]; then
+  fail "slow time $slow_time should be greater than medium time $baseline_time"
 else
-  pass "slow time $slow_time is less than medium time $medium_time"
+  pass "slow time $slow_time is greater than medium time $baseline_time"
 fi
-if [[ ! $medium_time -gt $baseline_time ]]; then
-  fail "medium time $medium_time should be greater than baseline time $baseline_time"
-else
-  pass "medium time $medium_time is greater than baseline time $baseline_time"
-fi
+
+# buffer size greater than 256 kib should cause a failure with OpenSSH
+assert_failure "ludicrous settings" octopus -g all copy -B 1024 -R 1024
 
 # Remove all the files we wrote from the test hosts
 octopus -g all run 'rm -rf /tmp/*' 1> /dev/null

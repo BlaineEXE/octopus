@@ -11,13 +11,16 @@ var statRemote = func(c *sftp.Client, dirPath string) (os.FileInfo, error) {
 	return c.Stat(dirPath)
 }
 
-var mkdirAllRemote = func(c *sftp.Client, dirPath string) error {
-	return c.MkdirAll(dirPath)
+var mkdirAllRemote = func(c *sftp.Client, dirPath string, mode os.FileMode) error {
+	if err := c.MkdirAll(dirPath); err != nil {
+		return err
+	}
+	return c.Chmod(dirPath, mode)
 }
 
 // CreateRemoteDir creates the dir as well as any nonexistent parents on the Actor's remote host if
 // any of the dirs do not exist. Return nil if the paths already exist.
-func (a *Actor) CreateRemoteDir(dirPath string) error {
+func (a *Actor) CreateRemoteDir(dirPath string, perms os.FileMode) error {
 	errMsg := "failed to create remote dir " + dirPath + ". %+v"
 	c, err := a.sftpClient()
 	if err != nil {
@@ -28,14 +31,19 @@ func (a *Actor) CreateRemoteDir(dirPath string) error {
 			return fmt.Errorf(errMsg, "dir exists and is a file")
 		}
 		// already exists
-	} else if err := mkdirAllRemote(c, dirPath); err != nil {
+	} else if err := mkdirAllRemote(c, dirPath, perms); err != nil {
 		return fmt.Errorf(errMsg, err)
 	}
 	return nil
 }
 
-var createRemote = func(c *sftp.Client, filePath string) (*sftp.File, error) {
-	return c.Create(filePath)
+var createRemote = func(c *sftp.Client, filePath string, perms os.FileMode) (*sftp.File, error) {
+	r, err := c.Create(filePath)
+	if err != nil {
+		return nil, err
+	}
+	r.Chmod(perms)
+	return r, nil
 }
 
 var writeToRemote = func(dest *sftp.File, source *os.File) (int64, error) {
@@ -47,13 +55,13 @@ var closeRemoteFile = func(f *sftp.File) error {
 }
 
 // CopyFileToRemote copies the file to the Actor's remote host at the remote file path.
-func (a *Actor) CopyFileToRemote(localSource *os.File, remoteFilePath string) error {
+func (a *Actor) CopyFileToRemote(localSource *os.File, remoteFilePath string, mode os.FileMode) error {
 	c, err := a.sftpClient()
 	if err != nil {
 		return err
 	}
 
-	d, err := createRemote(c, remoteFilePath)
+	d, err := createRemote(c, remoteFilePath, mode)
 	if err != nil {
 		return fmt.Errorf("failed to create remote file handler at path %s. %+v", remoteFilePath, err)
 	}

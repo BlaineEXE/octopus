@@ -20,8 +20,10 @@ type MockRemoteActor struct {
 	// Results
 	Commands       []string // all commands actor has attempted to run
 	DirCreates     []string // all dirs actor has attempted to create (incl. failed ones)
+	DirCreateModes []os.FileMode
 	DirCreateFails []string // dirs actor has failed to create
 	FileCopies     []string // all files actor has attempted to copy (incl. failed ones)
+	FileCopyModes  []os.FileMode
 	FileCopyFails  []string // files actor has failed to copy
 	CloseCalled    int      // Close has been called this many times
 }
@@ -70,10 +72,11 @@ func ExpectedCommandOutput(command string, err bool) (stdout, stderr string) {
 
 // CreateRemoteDir is a mock function that appends each remote dir path to DirCreates.
 // It will return an error after it has been called CreateDirErrorAfter number of times.
-func (m *MockRemoteActor) CreateRemoteDir(dirPath string) error {
+func (m *MockRemoteActor) CreateRemoteDir(dirPath string, mode os.FileMode) error {
 	actorMutex.Lock()
 	defer actorMutex.Unlock()
 	app(&m.DirCreates, dirPath)
+	m.DirCreateModes = append(m.DirCreateModes, mode)
 
 	if m.CreateDirErrorOn != "" && strings.Contains(dirPath, m.CreateDirErrorOn) {
 		app(&m.DirCreateFails, dirPath)
@@ -84,10 +87,11 @@ func (m *MockRemoteActor) CreateRemoteDir(dirPath string) error {
 
 // CopyFileToRemote is a mock function that appends each remote file path to FileCopies.
 // It will return an error after it has been called CopyFileErrorAfter number of times.
-func (m *MockRemoteActor) CopyFileToRemote(localSource *os.File, remoteFilePath string) error {
+func (m *MockRemoteActor) CopyFileToRemote(localSource *os.File, remoteFilePath string, mode os.FileMode) error {
 	actorMutex.Lock()
 	defer actorMutex.Unlock()
 	app(&m.FileCopies, remoteFilePath)
+	m.FileCopyModes = append(m.FileCopyModes, mode)
 
 	if m.CopyFileErrorOn != "" && strings.Contains(remoteFilePath, m.CopyFileErrorOn) {
 		app(&m.FileCopyFails, remoteFilePath)

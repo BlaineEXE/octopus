@@ -25,10 +25,11 @@ var OctopusCmd = &cobra.Command{
 
   Octopus is a simple pdsh-inspired commandline tool for running the same
   command on multiple remote hosts in parallel. Hosts are grouped together
-  into "host groups" in a file which inspired by pdsh's "genders" file. The
+  into "host groups" in a file which inspired by a "genders" file. The
   host groups file for Octopus is actually a Bash file with groups defined by
   variable definitions. This is so that the same file may be used easily by
-  both Octopus and by user-made scripts.
+	both Octopus and by user-made scripts and has the secondary benefit of
+	supporting defining hosts by IP address as well as hostname.
 
   Under the hood, Octopus uses ssh connections, and some ssh arguments are
   reflected in Octopus's arguments. These arguments are marked in the help

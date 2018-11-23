@@ -13,7 +13,7 @@ import (
 
 var stubSFTPClient = &sftp.Client{}
 
-func stubActor() *Actor {
+func mockActor(failSFTPConn bool) *Actor {
 	// set up an actor where the SFTP client is already "created"
 	a := &Actor{
 		host:            "test",
@@ -23,13 +23,10 @@ func stubActor() *Actor {
 		_sftpCreateOnce: sync.Once{},
 	}
 	a._sftpCreateOnce.Do(func() {})
-	return a
-}
-
-func failActor() *Actor {
-	a := stubActor()
-	a._sftpClient = nil
-	a._sftpClientErr = fmt.Errorf("test sftp client fail")
+	if failSFTPConn {
+		a._sftpClient = nil
+		a._sftpClientErr = fmt.Errorf("test sftp client fail")
+	}
 	return a
 }
 
@@ -39,85 +36,108 @@ func TestActor_CreateRemoteDir(t *testing.T) {
 	defer func() { statRemote = runtimeStatRemote }()
 	defer func() { mkdirAllRemote = runtimeMkdirAllRemote }()
 
-	stubFileInfo := &stubFileInfo{isDir: true}
+	stubFileInfo := &mockFileInfo{isDir: true}
 
+	var failStatRemote bool
 	var stattedPath string
-	stubStatRemote := func(c *sftp.Client, dirPath string) (os.FileInfo, error) {
-		stattedPath = dirPath
+	statRemote = func(c *sftp.Client, dirPath string) (os.FileInfo, error) {
+		stattedPath = dirPath // dir is still statted even if there is a failure
 		assert.Equal(t, stubSFTPClient, c)
+		if failStatRemote {
+			return nil, fmt.Errorf("test fail stat")
+		}
 		return stubFileInfo, nil
 	}
-	failStatRemote := func(c *sftp.Client, dirPath string) (os.FileInfo, error) {
-		stubStatRemote(c, dirPath) // it's still statted even if there is a failure
-		return nil, fmt.Errorf("test fail stat")
-	}
 
+	var failMkdirAll bool
 	var dirMade string
-	stubMkdirAllRemote := func(c *sftp.Client, dirPath string) error {
-		dirMade = dirPath
+	var modeMade os.FileMode
+	mkdirAllRemote = func(c *sftp.Client, dirPath string, mode os.FileMode) error {
 		assert.Equal(t, stubSFTPClient, c)
+		if failMkdirAll {
+			return fmt.Errorf("test fail mkdir all") // dir isn't made if failure
+		}
+		dirMade = dirPath
+		modeMade = mode
 		return nil
 	}
-	failMkdirAllRemote := func(c *sftp.Client, dirPath string) error {
-		return fmt.Errorf("test fail mkdir all") // dir isn't made if failure
-	}
 
+	type args struct {
+		dirPath string
+		mode    os.FileMode
+	}
+	type inject struct {
+		dirIsFile    bool
+		failStat     bool
+		failMkdirAll bool
+		failSFTPConn bool
+	}
 	type wants struct {
 		stattedPath string
-		dirMade     string
 		err         bool
 	}
 	tests := []struct {
-		name        string
-		createActor func() *Actor
-		dirPath     string
-		dirIsFile   bool
-		stat        func(c *sftp.Client, dirPath string) (os.FileInfo, error)
-		mkdirAll    func(c *sftp.Client, dirPath string) error
-		wants       wants
+		name   string
+		args   args
+		inject inject
+		wants  wants
 	}{
 		// stat success means dir already exists
-		{"create success", stubActor, "/root", false, stubStatRemote, stubMkdirAllRemote, wants{
-			stattedPath: "/root", dirMade: "not made", err: false}},
+		{"create success", args{"/root", 0644}, inject{},
+			wants{stattedPath: "/root", err: false}},
 		// stat fail means dir should be created
-		{"stat failure", stubActor, "/notexist", false, failStatRemote, stubMkdirAllRemote, wants{
-			stattedPath: "/notexist", dirMade: "/notexist", err: false}},
-		{"dir make failure", stubActor, "/dev", false, failStatRemote, failMkdirAllRemote, wants{
-			stattedPath: "/dev", dirMade: "not made", err: true}},
-		{"stat is file", stubActor, "/dev/null", true, stubStatRemote, stubMkdirAllRemote, wants{
-			stattedPath: "/dev/null", dirMade: "not made", err: true}},
-		{"sftp conn fail", failActor, "/home", false, stubStatRemote, stubMkdirAllRemote, wants{
-			stattedPath: "not statted", dirMade: "not made", err: true}},
+		{"stat failure", args{"/notexist", 0755}, inject{failStat: true},
+			wants{stattedPath: "/notexist", err: false}},
+		{"dir make failure", args{"/dev", 0750}, inject{failStat: true, failMkdirAll: true},
+			wants{stattedPath: "/dev", err: true}},
+		{"stat is file", args{"/dev/null", 0500}, inject{dirIsFile: true},
+			wants{stattedPath: "/dev/null", err: true}},
+		{"sftp conn fail", args{"/home", 0600}, inject{failSFTPConn: true},
+			wants{stattedPath: "not statted", err: true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stattedPath = "not statted"
 			dirMade = "not made"
-			stubFileInfo.isDir = !tt.dirIsFile
-			statRemote = tt.stat
-			mkdirAllRemote = tt.mkdirAll
-			if err := tt.createActor().CreateRemoteDir(tt.dirPath); (err != nil) != tt.wants.err {
+			modeMade = os.FileMode(0000)
+			stubFileInfo.isDir = !tt.inject.dirIsFile
+			failStatRemote = tt.inject.failStat
+			failMkdirAll = tt.inject.failMkdirAll
+			err := mockActor(tt.inject.failSFTPConn).CreateRemoteDir(tt.args.dirPath, tt.args.mode)
+			if (err != nil) != tt.wants.err {
 				t.Errorf("Actor.CreateRemoteDir() error = %v, want err %v", err, tt.wants.err)
 			}
-			assert.Equal(t, tt.wants.stattedPath, stattedPath)
-			assert.Equal(t, tt.wants.dirMade, dirMade)
+			// dir always statted unless error creating actor
+			if !tt.inject.failSFTPConn {
+				assert.Equal(t, tt.args.dirPath, stattedPath)
+			} else {
+				assert.Equal(t, "not statted", stattedPath)
+			}
+			// dir isn't made if error creating actor, failure to make dir, if dir already exists
+			if !tt.inject.failSFTPConn && !failMkdirAll && tt.inject.failStat && !tt.inject.dirIsFile {
+				assert.Equal(t, tt.args.dirPath, dirMade)
+				assert.Equal(t, tt.args.mode, modeMade)
+			} else {
+				assert.Equal(t, "not made", dirMade)
+				assert.Equal(t, os.FileMode(0000), modeMade)
+			}
 		})
 	}
 }
 
-type stubFileInfo struct {
+type mockFileInfo struct {
 	isDir bool
 }
 
-func (fi *stubFileInfo) Name() string      { return "stubName" }
-func (fi *stubFileInfo) Size() int64       { return 1024 }
-func (fi *stubFileInfo) Mode() os.FileMode { return 0644 }
-func (fi *stubFileInfo) ModTime() time.Time {
+func (fi *mockFileInfo) Name() string      { return "stubName" }
+func (fi *mockFileInfo) Size() int64       { return 1024 }
+func (fi *mockFileInfo) Mode() os.FileMode { return 0644 }
+func (fi *mockFileInfo) ModTime() time.Time {
 	utc, _ := time.LoadLocation("UTC")
 	return time.Date(2000, 1, 1, 1, 1, 1, 1, utc)
 }
-func (fi *stubFileInfo) IsDir() bool      { return fi.isDir }
-func (fi *stubFileInfo) Sys() interface{} { return nil }
+func (fi *mockFileInfo) IsDir() bool      { return fi.isDir }
+func (fi *mockFileInfo) Sys() interface{} { return nil }
 
 func TestActor_CopyFileToRemote(t *testing.T) {
 	runtimeCreateRemote := createRemote
@@ -130,24 +150,27 @@ func TestActor_CopyFileToRemote(t *testing.T) {
 	stubSourceFile := &os.File{}
 	stubSFTPFile := &sftp.File{}
 
+	var failCreateRemote bool
 	var fileCreated string
-	stubCreateRemote := func(c *sftp.Client, filePath string) (*sftp.File, error) {
-		fileCreated = filePath
+	var modeCreated os.FileMode
+	createRemote = func(c *sftp.Client, filePath string, mode os.FileMode) (*sftp.File, error) {
 		assert.Equal(t, stubSFTPClient, c)
+		if failCreateRemote {
+			return nil, fmt.Errorf("test fail create")
+		}
+		fileCreated = filePath
+		modeCreated = mode
 		return stubSFTPFile, nil
 	}
-	failCreateRemote := func(c *sftp.Client, filePath string) (*sftp.File, error) {
-		return nil, fmt.Errorf("test fail create")
-	}
 
-	stubWriteToRemote := func(dest *sftp.File, source *os.File) (int64, error) {
+	var failWriteToRemote bool
+	writeToRemote = func(dest *sftp.File, source *os.File) (int64, error) {
 		assert.Equal(t, stubSFTPFile, dest)
 		assert.Equal(t, stubSourceFile, source)
+		if failWriteToRemote {
+			return 0, fmt.Errorf("test fail write")
+		}
 		return 1024, nil
-	}
-	failWriteToRemote := func(dest *sftp.File, source *os.File) (int64, error) {
-		stubWriteToRemote(dest, source)
-		return 0, fmt.Errorf("test fail write")
 	}
 
 	var remoteFileClosed bool
@@ -156,36 +179,55 @@ func TestActor_CopyFileToRemote(t *testing.T) {
 		return nil
 	}
 
+	type args struct {
+		remoteFilePath string
+		mode           os.FileMode
+	}
+	type inject struct {
+		failSFTPConn      bool
+		failCreateRemote  bool
+		failWriteToRemote bool
+	}
+	type wants struct {
+		err bool
+	}
 	tests := []struct {
-		name                 string
-		createActor          func() *Actor
-		create               func(c *sftp.Client, filePath string) (*sftp.File, error)
-		write                func(dest *sftp.File, source *os.File) (int64, error)
-		remoteFilePath       string
-		fileCreated          string
-		wantRemoteFileClosed bool
-		wantErr              bool
+		name   string
+		args   args
+		inject inject
+		wants  wants
 	}{
-		{"copy success", stubActor, stubCreateRemote, stubWriteToRemote, "/etc/wasp",
-			"/etc/wasp", true, false},
-		{"create fail", stubActor, failCreateRemote, stubWriteToRemote, "/dev/devices",
-			"not created", false, true},
-		{"write fail", stubActor, stubCreateRemote, failWriteToRemote, "/mnt/unmounted",
-			"/mnt/unmounted", true, true},
-		{"sftp conn fail", failActor, stubCreateRemote, stubWriteToRemote, "/home/drake",
-			"not created", false, true},
+		{"copy success", args{"/etc/wasp", 0644}, inject{},
+			wants{err: false}},
+		{"create fail", args{"/dev/devices", 0755}, inject{failCreateRemote: true},
+			wants{err: true}},
+		{"write fail", args{"/mnt/unmounted", 0750}, inject{failWriteToRemote: true},
+			wants{err: true}},
+		{"sftp conn fail", args{"/home/drake", 0500}, inject{failSFTPConn: true},
+			wants{err: true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fileCreated = "not created"
+			modeCreated = os.FileMode(0000)
 			remoteFileClosed = false
-			createRemote = tt.create
-			writeToRemote = tt.write
-			if err := tt.createActor().CopyFileToRemote(stubSourceFile, tt.remoteFilePath); (err != nil) != tt.wantErr {
-				t.Errorf("Actor.CopyFileToRemote() error = %v, wantErr %v", err, tt.wantErr)
+			failCreateRemote = tt.inject.failCreateRemote
+			failWriteToRemote = tt.inject.failWriteToRemote
+			err := mockActor(tt.inject.failSFTPConn).
+				CopyFileToRemote(stubSourceFile, tt.args.remoteFilePath, tt.args.mode)
+			if (err != nil) != tt.wants.err {
+				t.Errorf("Actor.CopyFileToRemote() error = %v, wantErr %v", err, tt.wants.err)
 			}
-			assert.Equal(t, tt.fileCreated, fileCreated)
-			assert.Equal(t, tt.wantRemoteFileClosed, remoteFileClosed)
+			// file is only copied if create file doesn't fail and create actor doesn't fail
+			if tt.inject.failSFTPConn || failCreateRemote {
+				assert.Equal(t, "not created", fileCreated)
+				assert.Equal(t, os.FileMode(0000), modeCreated)
+				assert.Equal(t, false, remoteFileClosed)
+			} else {
+				assert.Equal(t, tt.args.remoteFilePath, fileCreated)
+				assert.Equal(t, tt.args.mode, modeCreated)
+				assert.Equal(t, true, remoteFileClosed)
+			}
 		})
 	}
 }

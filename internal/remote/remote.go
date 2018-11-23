@@ -34,11 +34,11 @@ type Actor interface {
 
 	// CreateRemotedir should create a directory along with any nonexistent parents on the remote
 	// host specified in the Connector.Connect method. Should return nil if the paths already exist.
-	CreateRemoteDir(dirPath string) error
+	CreateRemoteDir(dirPath string, perms os.FileMode) error
 
 	// CopyFileToRemote should copy the file to the remote host specified in the Connector.Connect
 	// method at the remote path, and the remote path includes the remote file name.
-	CopyFileToRemote(localSource *os.File, remoteFilePath string) error
+	CopyFileToRemote(localSource *os.File, remoteFilePath string, perms os.FileMode) error
 
 	// Close should close all necessary connections the Actor has made.
 	Close() error
