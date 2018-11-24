@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/spf13/viper"
 
@@ -29,8 +28,8 @@ func TrainOctopus() (*octopus.Octopus, error) {
 	logger.Info.Println("Config file used: ", viper.ConfigFileUsed())
 	logger.Info.Println("Parsing global flags")
 
-	rawHostGroups := viper.GetString("host-groups")
-	if rawHostGroups == "" {
+	hostGroups := viper.GetStringSlice("host-groups")
+	if len(hostGroups) == 0 {
 		// host-groups is not required for 'version' command; only commands that require an octopus
 		// to be created. Do a manual check here so that Cobra doesn't check 'version' for
 		// host-groups. Do not return an error here, but instead print to stderr and exit nonzero
@@ -39,7 +38,7 @@ func TrainOctopus() (*octopus.Octopus, error) {
 		os.Stderr.WriteString(OctopusCmd.UsageString())
 		os.Exit(-1)
 	}
-	hostGroups := strings.Split(rawHostGroups, ",")
+	logger.Info.Println("Host groups:", hostGroups)
 
 	groupsFile := getAbsFilePath(viper.GetString("groups-file"))
 	identityFile := getAbsFilePath(viper.GetString("identity-file"))
