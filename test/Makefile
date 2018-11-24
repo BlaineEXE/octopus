@@ -30,4 +30,4 @@ teardown:
 		host=$(HOST_BASENAME)-$$i ; \
 		docker stop $$host ; \
 	done || true
-	@ rm $(GROUPFILE) || true
+	@ rm -rf $(GROUPFILE)

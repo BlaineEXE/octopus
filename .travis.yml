@@ -2,11 +2,23 @@ language: go
 go:
   - "1.11"
 
+sudo: required
+services:
+  - docker
+
 # dep needed to make vendor dir
 before_install:
+  - mkdir -p ${TRAVIS_HOME}/gopath/bin
   - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 
-script: make test test.integration
+matrix:
+  include:
+    - os:  linux
+      env: GOOS=linux GOARCH=amd64 SUITES='test test.integration'
+    - os:  osx
+      env: GOOS=darwin GOARCH=amd64 SUITES='test'
+
+script: make ${SUITES}
 
 branches:
   only:
