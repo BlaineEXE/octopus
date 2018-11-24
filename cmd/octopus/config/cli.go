@@ -70,7 +70,7 @@ func init() {
 	// Persistent top-level flags
 	OctopusCmd.PersistentFlags().StringP("groups-file", "f", defaultGroupsFile,
 		"file which defines groups of remote hosts available for execution")
-	OctopusCmd.PersistentFlags().StringP("host-groups", "g", "",
+	OctopusCmd.PersistentFlags().StringSliceP("host-groups", "g", []string{},
 		"comma-separated list of host groups; the command will be run on each host in every group")
 	OctopusCmd.PersistentFlags().StringP("identity-file", "i", "$HOME/.ssh/id_rsa",
 		"(ssh) file from which the identity (private key) for public key authentication is read")
