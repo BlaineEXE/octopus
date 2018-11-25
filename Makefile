@@ -1,3 +1,9 @@
+ifndef GOOS
+# Workaround for Travis CI: load go environment variables
+export GOOS := $(shell go env GOOS)
+export GOARCH := $(shell go env GOARCH)
+endif
+
 # Entering/Leaving directory messages are annoying and not very useful
 MAKEFLAGS += --no-print-directory
 
@@ -5,12 +11,7 @@ GO_IMPORT_ROOT ?= github.com/BlaineEXE/octopus
 GO_BUILD_TARGET := $(GO_IMPORT_ROOT)/cmd/octopus
 OUTPUT_DIR ?= _output
 
-ifeq ($(GOOS),darwin)
-BUILDFLAGS ?= -buildmode shared
-else
 BUILDFLAGS ?= -buildmode pie
-endif
-LDFLAGS ?=
 
 # Version is automatically set by getting tag info from git; can be set manually if desired
 VERSION ?= $(shell git describe --dirty --always --tags | sed 's/-/./2' | sed 's/-/./2' )
