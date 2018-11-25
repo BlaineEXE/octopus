@@ -32,7 +32,8 @@ deploy:
   provider: releases
   api_key:
     secure: rGutjjUlzrTyAc0ckEBXGohdDaJADOHnljwpqjch/sMTSJUnsdVvcbBH4Dq26MUH3Vg/+coF4XxZZV+voCUunEeUl9DKf4bKwyARFZ3JbhBtN149NwvyH7AZiI9cUyXUB4DM5SAshTcXalC9twbXGyycSugw17LQhgDY6G28Q6RrNya3bSfHFzX7tUUi6XfT2OSMsq5+ZVfOkhkCh70UNLEiEb+wp/Lo4uCHJ6IoAQpo7FYd5IAHFonaCgdfnfKOVu5ZuEenmnwNvWZ6VO9FAin5JeqrSyXfR+Wkg47TTe3bVShPrguzZK+ZTe7klowfbxilxF/50PJmx7dz7Wj1ht/iVs730RU51rFRgjehJvQoVitkPvmPzj2w9S5HcH8JKKHyqdlnVf+VeWvUSumeumsJ0mN+rjUpdMrxre18lq+7NkAGQHcj6v+EtD5nbiMS4JUTdSDs1yp5CGWzoGv3g7QmunOqem4Ec0Iia2B/dBQ18eB+HxOW3nQZBM2NoZkPwD0VBXLtuJMiacvWswDQbynJ9hPn8gq2TltgFkH4EYUhlO6Q9lXwwHT1A6Zj6xUXbJ1IPMfo4VPLNgh+57kY1iFIftg08KPl+IKQutzbvhPSe3NZivvmRMli+CTWG1KnSobcPU99CwBPNzY/6sgjMJg0iaYShTkxGFqwo2PyFnw=
-  file: _output/octopus-static-$VERSION-$GOOS-$GOARCH
+  file_glob: true
+  file: _output/octopus-*
   skip_cleanup: true
   on:
     repo: BlaineEXE/octopus
