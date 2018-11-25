@@ -13,8 +13,11 @@ before_install:
 
 matrix:
   include:
+    # `make test.integration` target currently only works on linux.
     - os:  linux
-      env: GOOS=linux GOARCH=amd64 SUITES='test test.integration'
+      env: GOOS=linux GOARCH=amd64 SUITES='test test.smoke test.integration'
+    # Nov.2018: Travis CI does not support running Docker on OSX, and future support is not planned.
+    # The best testing we can do currently is to do unit tests.
     - os:  osx
       env: GOOS=darwin GOARCH=amd64 SUITES='test'
 
@@ -23,3 +26,12 @@ script: make ${SUITES}
 branches:
   only:
   - master
+
+deploy:
+  provider: releases
+  api_key: $GITHUB_OAUTH_TOKEN
+  file:
+    - "_output/octopus-static-$VERSION-$GOOS-$GOARCH"
+  skip_cleanup: true
+  on:
+    tags: true
