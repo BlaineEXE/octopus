@@ -26,6 +26,7 @@ script: make $SUITES
 branches:
   only:
   - master
+  - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 
 deploy:
   provider: releases
