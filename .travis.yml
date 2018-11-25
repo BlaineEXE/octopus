@@ -30,6 +30,7 @@ branches:
 
 deploy:
   provider: releases
+  api-key: $GITHUB_RELEASE_TOKEN
   file:
     - "_output/octopus-static-$VERSION-$GOOS-$GOARCH"
   skip_cleanup: true
