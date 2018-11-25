@@ -20,21 +20,33 @@ LDFLAGS += -X $(GO_IMPORT_ROOT)/internal/version.Version=$(VERSION)
 
 ALL_BUILDFLAGS := $(BUILDFLAGS) -ldflags '$(LDFLAGS)'
 
+# Allow setting this to not-false to test binaries built by crossbuild instead of regular build
+# e.g., for CI testing so binaries deployed after CI are more sure to be working.
+TEST_CROSSBUILD_BINARIES ?= false
+XGO_FLAGS ?=
+
+BINARY_NAME ?= $(OUTPUT_DIR)/octopus-static-$(VERSION)-$(GOOS)-$(GOARCH)
+
 .PHONY: vendor
 vendor:
 	@ dep ensure
 
 build: vendor
-	go build $(ALL_BUILDFLAGS) -o $(OUTPUT_DIR)/octopus $(GO_BUILD_TARGET)
-	@ echo "Binary size: $$(ls -sh $(OUTPUT_DIR)/octopus | cut -d' ' -f 1)"
+	go build $(ALL_BUILDFLAGS) -o $(BINARY_NAME) $(GO_BUILD_TARGET)
+	@ echo "Binary size: $$(ls -sh $(BINARY_NAME) | cut -d' ' -f 1)"
 
 test: vendor
 	go test -cover ./cmd/... ./internal/...
 
 test.integration: vendor build
 	@ mkdir -p test/_output
-	@ cp _output/octopus test/_output/octopus
+	cp $(BINARY_NAME) test/_output/octopus
 	@ $(MAKE) --directory test all
+
+test.smoke: vendor build
+	@ mkdir -p test/_output
+	cp $(BINARY_NAME) test/_output/octopus
+	@ $(MAKE) --directory test smoke
 
 install: vendor
 	go install $(ALL_BUILDFLAGS) $(GO_BUILD_TARGET)

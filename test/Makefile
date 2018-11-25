@@ -12,6 +12,9 @@ $(shell mkdir -p groupfile)
 all: teardown build setup run
 	@ $(MAKE) teardown
 
+smoke: teardown build setup quick
+	@ $(MAKE) teardown
+
 build:
 	@ docker build --tag $(IMAGE_TAG) .
 
@@ -21,6 +24,11 @@ setup:
 
 run:
 	@ ./run-tests.sh
+
+quick:
+	@ echo ""
+	@ if ./quicktest.sh; then echo "   QUICK TEST SUCCESSFUL"; else echo "   QUICK TEST FAILED"; fi
+	@ echo ""
 
 teardown:
 	@ echo "Tearing down test hosts..."
