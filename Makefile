@@ -52,6 +52,10 @@ test.smoke: vendor build
 install: vendor
 	go install $(ALL_BUILDFLAGS) $(GO_BUILD_TARGET)
 
+completion:
+	@ # Currently only generates a basic completion shell file and prints to stdout
+	@ go run cmd/octopus/bashcompletion/generate.go
+
 clean:
 	rm -rf $(OUTPUT_DIR)
 	rm -rf vendor/
