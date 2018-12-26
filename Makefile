@@ -4,6 +4,9 @@ export GOOS := $(shell go env GOOS)
 export GOARCH := $(shell go env GOARCH)
 endif
 
+# Set go module to on
+export GO111MODULE=on
+
 # Entering/Leaving directory messages are annoying and not very useful
 MAKEFLAGS += --no-print-directory
 
@@ -30,7 +33,10 @@ BINARY_NAME ?= $(OUTPUT_DIR)/octopus-static-$(VERSION)-$(GOOS)-$(GOARCH)
 
 .PHONY: vendor
 vendor:
-	@ dep ensure
+	@ go mod vendor
+
+update.dependencies:
+	@ go get -u ./...
 
 build: vendor
 	go build $(ALL_BUILDFLAGS) -o $(BINARY_NAME) $(GO_BUILD_TARGET)
