@@ -42,6 +42,8 @@ assert_output_count "$(get_md5sum work/dirA/fileAA)" $NUM_HOSTS
 assert_output_count "$(get_md5sum work/dirA/fileAB)" $NUM_HOSTS
 assert_success '  and fileAA has perms 0600' octopus -g all run 'ls -l /tmp/3/dirA/fileAA'
 assert_output_count '-rw-------' $NUM_HOSTS
+assert_success '  and fileAA modified time was copied to remote' octopus -g all run \
+  "[[ $(stat --format=%Y work/dirA/fileAA) = \$(stat --format=%Y /tmp/3/dirA/fileAA) ]]"
 
 assert_retcode 'with failure to copy unreadable file in readable dir' $NUM_HOSTS \
   octopus -g all copy -r work/dirB /tmp/4

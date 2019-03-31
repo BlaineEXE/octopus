@@ -87,11 +87,11 @@ func (m *MockRemoteActor) CreateRemoteDir(dirPath string, mode os.FileMode) erro
 
 // CopyFileToRemote is a mock function that appends each remote file path to FileCopies.
 // It will return an error after it has been called CopyFileErrorAfter number of times.
-func (m *MockRemoteActor) CopyFileToRemote(localSource *os.File, remoteFilePath string, mode os.FileMode) error {
+func (m *MockRemoteActor) CopyFileToRemote(localSource *os.File, remoteFilePath string, info os.FileInfo) error {
 	actorMutex.Lock()
 	defer actorMutex.Unlock()
 	app(&m.FileCopies, remoteFilePath)
-	m.FileCopyModes = append(m.FileCopyModes, mode)
+	m.FileCopyModes = append(m.FileCopyModes, info.Mode().Perm())
 
 	if m.CopyFileErrorOn != "" && strings.Contains(remoteFilePath, m.CopyFileErrorOn) {
 		app(&m.FileCopyFails, remoteFilePath)

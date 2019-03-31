@@ -3,6 +3,7 @@ package ssh
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/pkg/sftp"
 )
@@ -37,12 +38,12 @@ func (a *Actor) CreateRemoteDir(dirPath string, perms os.FileMode) error {
 	return nil
 }
 
-var createRemote = func(c *sftp.Client, filePath string, perms os.FileMode) (*sftp.File, error) {
+var createRemote = func(c *sftp.Client, filePath string, info os.FileInfo) (*sftp.File, error) {
 	r, err := c.Create(filePath)
 	if err != nil {
 		return nil, err
 	}
-	r.Chmod(perms)
+	r.Chmod(info.Mode().Perm())
 	return r, nil
 }
 
@@ -55,13 +56,13 @@ var closeRemoteFile = func(f *sftp.File) error {
 }
 
 // CopyFileToRemote copies the file to the Actor's remote host at the remote file path.
-func (a *Actor) CopyFileToRemote(localSource *os.File, remoteFilePath string, mode os.FileMode) error {
+func (a *Actor) CopyFileToRemote(localSource *os.File, remoteFilePath string, info os.FileInfo) error {
 	c, err := a.sftpClient()
 	if err != nil {
 		return err
 	}
 
-	d, err := createRemote(c, remoteFilePath, mode)
+	d, err := createRemote(c, remoteFilePath, info)
 	if err != nil {
 		return fmt.Errorf("failed to create remote file handler at path %s. %+v", remoteFilePath, err)
 	}
@@ -69,6 +70,10 @@ func (a *Actor) CopyFileToRemote(localSource *os.File, remoteFilePath string, mo
 
 	if _, err := writeToRemote(d, localSource); err != nil {
 		return fmt.Errorf("failed to write to remote file %s. %+v", remoteFilePath, err)
+	}
+
+	if err := c.Chtimes(remoteFilePath, time.Now(), info.ModTime()); err != nil {
+		return fmt.Errorf("failed to set the remote file %s's last modified time. %+v", remoteFilePath, err)
 	}
 
 	return nil
