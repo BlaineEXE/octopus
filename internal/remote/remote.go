@@ -38,7 +38,7 @@ type Actor interface {
 
 	// CopyFileToRemote should copy the file to the remote host specified in the Connector.Connect
 	// method at the remote path, and the remote path includes the remote file name.
-	CopyFileToRemote(localSource *os.File, remoteFilePath string, perms os.FileMode) error
+	CopyFileToRemote(localSource *os.File, remoteFilePath string, info os.FileInfo) error
 
 	// Close should close all necessary connections the Actor has made.
 	Close() error

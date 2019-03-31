@@ -129,7 +129,7 @@ func doCopyDirOrFile(
 			}
 		} else {
 			wg.Add(1)
-			go doCopyFile(a, pth, fullDest, info.Mode().Perm(), wg, errors)
+			go doCopyFile(a, pth, fullDest, info, wg, errors)
 		}
 
 		return nil
@@ -143,7 +143,7 @@ func doCopyDirOrFile(
 func doCopyFile(
 	a remote.Actor,
 	sourcePath, destPath string,
-	mode os.FileMode,
+	info os.FileInfo,
 	wg *sync.WaitGroup, errors chan<- error,
 ) {
 	defer wg.Done()
@@ -157,7 +157,7 @@ func doCopyFile(
 	}
 	defer s.Close()
 
-	if err := a.CopyFileToRemote(s, destPath, mode); err != nil {
+	if err := a.CopyFileToRemote(s, destPath, info); err != nil {
 		errors <- fmt.Errorf("failed to copy file %s to remote at %s. %+v", sourcePath, destPath, err)
 		return
 	}
