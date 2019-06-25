@@ -4,6 +4,7 @@ package octopus
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/BlaineEXE/octopus/internal/logger"
@@ -26,6 +27,26 @@ func New(c remote.Connector, hostGroups []string, groupsFile string) *Octopus {
 		hostGroups:      hostGroups,
 		groupsFile:      groupsFile,
 	}
+}
+
+// ValidHostGroups returns a list of host groups which are available for Octopus to run against.
+func (o *Octopus) ValidHostGroups() ([]string, error) {
+	logger.Info.Println("groups file: ", o.groupsFile)
+
+	f, err := os.Open(o.groupsFile)
+	if err != nil {
+		return []string{}, fmt.Errorf("could not load groups file: %+v", err)
+	}
+
+	g, err := getAllGroupsInFile(f)
+	if err != nil {
+		return []string{}, fmt.Errorf("failed to parse groups file. %+v", err)
+	}
+	gs := []string{}
+	for k := range g {
+		gs = append(gs, k)
+	}
+	return gs, nil
 }
 
 // Do sends out tentacles to all hosts in the host group(s) in individual goroutines and collects
