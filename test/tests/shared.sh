@@ -61,10 +61,20 @@ function assert_failure () {
 
 function assert_output_count () { # 1) output desired 2) desired count
   if [ "$(grep --count --regexp "$1" /tmp/output)" == "$2" ]; then
-    pass "'$1' is in output exactly $2 times"
+    pass "'$1'" is in output exactly "$2" times
   else
     cat /tmp/output
-    fail "'$1' is in output $(grep --count "$1" /tmp/output) times; expected $2"
+    fail "'$1'" is in output "$(grep --count "$1" /tmp/output)" "times;" expected "$2"
+  fi
+}
+
+function assert_num_output_lines_with_text () { # 1) number of output lines with text desired
+  lines="$(grep --extended-regexp '.+' /tmp/output | wc --lines)"
+  if [ "$lines" == "$1" ]; then
+    pass output has exactly "$1" text lines
+  else
+    cat /tmp/output
+    fail output has "$lines" text lines; expected "$1"
   fi
 }
 
