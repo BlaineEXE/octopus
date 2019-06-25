@@ -82,20 +82,19 @@ assert_output_count "rest" 1
 mkdir -p "$HOME/work"
 mv "$GROUPFILE" "$HOME/work/groups-file"
 assert_failure "with groups file not found" octopus host-groups
-cat > "$GROUPFILE" << EOF
-one="1.1.1.1"
-two="2.2.2.2"
+cat > "$GROUPFILE" << 'EOF'
+export one="1.1.1.1"
+export two="2.2.2.2"
 three="3.3.3.3"
 
-first="$one"
+export first="$one"
 rest="$two"
-rest="$rest $three"
+export rest="$rest $three"
 EOF
 assert_success "with custom groups file" octopus host-groups
 assert_output_count "one" 1
 assert_output_count "two" 1
-assert_output_count "three" 1
 assert_output_count "first" 1
 assert_output_count "rest" 1
-assert_num_output_lines_with_text 5
+assert_num_output_lines_with_text 4
 mv "$HOME/work/groups-file" "$GROUPFILE"

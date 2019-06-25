@@ -2,10 +2,9 @@ package octopus
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 
 	"github.com/BlaineEXE/octopus/internal/logger"
@@ -15,12 +14,7 @@ import (
 var getAddrsFromGroupsFile = func(hostGroups []string, groupsFile string) ([]string, error) {
 	logger.Info.Println("groups file: ", groupsFile)
 
-	f, err := os.Open(groupsFile)
-	if err != nil {
-		return []string{}, fmt.Errorf("could not load groups file: %+v", err)
-	}
-
-	fileGroups, err := getAllGroupsInFile(f)
+	fileGroups, err := getAllGroupsInFile(groupsFile)
 	if err != nil {
 		return []string{}, fmt.Errorf("error parsing groups file %s: %+v", groupsFile, err)
 	}
@@ -35,7 +29,7 @@ var getAddrsFromGroupsFile = func(hostGroups []string, groupsFile string) ([]str
 	}
 
 	// Source the hosts file, and echo all the groups without newlines to get all hosts
-	cmd := exec.Command("/bin/bash", "-ec",
+	cmd := exec.Command("bash", "-ec",
 		fmt.Sprintf("source %s ; echo %s", groupsFile, strings.Join(gVars, " ")))
 	o, err := cmd.CombinedOutput()
 	// convert to string which has exactly one newline
@@ -48,17 +42,84 @@ var getAddrsFromGroupsFile = func(hostGroups []string, groupsFile string) ([]str
 	return addrs, nil
 }
 
-func getAllGroupsInFile(f *os.File) (map[string]bool, error) {
-	scanner := bufio.NewScanner(f)
-	fileGroups := map[string]bool{}
-	// Regex to match Bash variable definition of a host group. Matches: <varname>="
-	// <varname> can be any bash variable; the double quote is required
-	varRegex, _ := regexp.Compile("^([a-zA-Z_][a-zA-Z0-9_]*)=[\"']")
+func getAllGroupsInFile(filePath string) (map[string]bool, error) {
+	errMsg := "failed to parse groups from groups file"
+	retGroups := map[string]bool{}
+
+	// get the set of environment variables which bash reports by default, e.g., PWD, SHLVL, _
+	// env --ignore-environment is not available on mac, so must use "-i"
+	getBaseEnv := exec.Command("env", "-i", "-", "bash", "-c", "env")
+	baseEnv, err := getBaseEnv.Output()
+	if err != nil {
+		return retGroups, fmt.Errorf("%s. failed to determine base environment variables. %+v", errMsg, err)
+	}
+	baseVars := map[string]bool{}
+	b := bytes.NewReader(baseEnv)
+	scanner := bufio.NewScanner(b)
 	for scanner.Scan() {
-		l := strings.TrimLeft(scanner.Text(), " \t")
-		if m := varRegex.FindStringSubmatch(l); m != nil {
-			fileGroups[m[1]] = true
+		v := parseLine(scanner.Text())
+		if v != "" {
+			baseVars[v] = true
 		}
 	}
-	return fileGroups, scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return retGroups, fmt.Errorf("%s. failed to parse base environment variables. %+v", errMsg, err)
+	}
+
+	// get the set of environment variables which bash reports after loading the group file
+	// this will also report the base env vars found above, which we want to ignore
+	fileEnvCmd := fmt.Sprintf("source %s && env", filePath)
+	getFileEnv := exec.Command("env", "-i", "-", "bash", "-c", fileEnvCmd)
+	fileEnv, err := getFileEnv.Output()
+	if err != nil {
+		return retGroups, fmt.Errorf("%s. failed to determine exported host groups file variables. %+v", errMsg, err)
+	}
+
+	b = bytes.NewReader(fileEnv)
+	scanner = bufio.NewScanner(b)
+	for scanner.Scan() {
+		l := scanner.Text()
+		logger.Info.Println(l)
+		v := parseLine(l)
+		if v == "" {
+			continue
+		}
+		if _, ok := baseVars[v]; ok {
+			// if env is in base envs, don't count it as a group
+			continue
+		}
+		retGroups[v] = true
+	}
+	if err := scanner.Err(); err != nil {
+		return retGroups, fmt.Errorf("%s. failed to parse exported host groups file variables. %+v", errMsg, err)
+	}
+
+	return retGroups, nil
+}
+
+// parse a bash variable name from a line returned by `env`
+// variable names match regex [a-zA-Z_][a-zA-Z0-9_]* and always end with an equal sign
+// variables may have multiline strings which will start on the line following the var name, so
+//   not all lines will have a variable
+func parseLine(line string) string {
+	if len(line) == 0 {
+		return ""
+	}
+	c := line[0]
+	if (c < 'a' || 'z' < c) && (c < 'A' || 'Z' < c) && c != '_' {
+		return ""
+	}
+	v := make([]byte, 0, len(line))
+	v = append(v, c)
+	for i := 1; i < len(line); i++ {
+		c = line[i]
+		if c == '=' {
+			break
+		}
+		if (c < 'a' || 'z' < c) && (c < 'A' || 'Z' < c) && c != '_' && (c < '0' || c > '9') {
+			return ""
+		}
+		v = append(v, c)
+	}
+	return string(v)
 }

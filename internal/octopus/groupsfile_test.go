@@ -18,40 +18,40 @@ func init() {
 
 const parsableGroups = `
 # simple
-a="1.1.1.1"
-b='2.2.2.2'
-_3="3.3.3.3"
-_4='4.4.4.4'
+export a="1.1.1.1"
+export b='2.2.2.2'
+export _3="3.3.3.3"
+export _4='4.4.4.4'
 
 # double-quoted multi, all variants
-d34="3.3.3.3 4.4.4.4"
-d5_6="5.5.5.5
+export d34="3.3.3.3 4.4.4.4"
+export d5_6="5.5.5.5
 6.6.6.6"
-d_78="
+export d_78="
 7.7.7.7 8.8.8.8"
-d_9_10="
+export d_9_10="
 9.9.9.9
 10.10.10.10"
-d_11_12_="
+export d_11_12_="
 11.11.11.11
 12.12.12.12
 "
 
 # single-quoted multi
-s56='5.5.5.5 6.6.6.6'
-s_7_8_='
+export s56='5.5.5.5 6.6.6.6'
+export s_7_8_='
 7.7.7.7
 8.8.8.8
 '
 
 # leading/trailing space
-ltd78=" 7.7.7.7 8.8.8.8 "
-lts910=' 9.9.9.9 10.10.10.10 '
+export ltd78=" 7.7.7.7 8.8.8.8 "
+export lts910=' 9.9.9.9 10.10.10.10 '
 
 # mixed
-md9to12="9.9.9.9 10.10.10.10
+export md9to12="9.9.9.9 10.10.10.10
 11.11.11.11 12.12.12.12"
-ms13to16='13.13.13.13 14.14.14.14
+export ms13to16='13.13.13.13 14.14.14.14
 15.15.15.15 16.16.16.16'
 `
 
@@ -60,8 +60,12 @@ const noGroups = `
 `
 
 const unparsableGroups = `
-a='9.9.9.9'
-t="1.1.1.1'
+export a='9.9.9.9'
+export t="1.1.1.1'
+`
+
+const invalidVarName = `
+export a&b='1.1.1.1'
 `
 
 func Test_getAddrsFromGroupsFile(t *testing.T) {
@@ -103,6 +107,7 @@ func Test_getAddrsFromGroupsFile(t *testing.T) {
 		{"arbitrary, out of order selection", goodGroupsFile, []string{"md9to12", "ltd78", "_4"},
 			[]string{"9.9.9.9", "10.10.10.10", "11.11.11.11", "12.12.12.12",
 				"7.7.7.7", "8.8.8.8", "4.4.4.4"}, false},
+		{"invalid var name", invalidVarName, []string{}, []string{}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
