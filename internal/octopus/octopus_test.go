@@ -5,12 +5,127 @@ package octopus
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 	"testing"
 
+	"github.com/BlaineEXE/octopus/internal/logger"
 	"github.com/BlaineEXE/octopus/internal/remote"
 	remotetest "github.com/BlaineEXE/octopus/internal/remote/test"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestOctopus_ValidHostGroups(t *testing.T) {
+	logger.Info.SetOutput(os.Stderr)
+	testRootDir, err := ioutil.TempDir("", "octopus-test-valid-host-groups")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(testRootDir)
+	groupFile := path.Join(testRootDir, "_test-groups-file")
+
+	createTestGroupFile := func(groupFileText string) {
+		f, err := os.Create(groupFile)
+		assert.NoError(t, err)
+		f.WriteString(groupFileText)
+		f.Close()
+	}
+
+	createTestGroupFile(`
+export one="1.1.1.1"
+export two="2.2.2.2"
+export three='3.3.3.3'
+export first="$one"
+intermediate="$two"
+rest="$intermediate $three"
+export rest`)
+	o := &Octopus{
+		remoteConnector: &remotetest.MockRemoteConnector{},
+		hostGroups:      []string{},
+		groupsFile:      groupFile,
+	}
+	groups, err := o.ValidHostGroups()
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, groups, []string{"one", "two", "three", "first", "rest"})
+
+	createTestGroupFile(`
+export a="1.1.1.1"
+export a0="2.2.2.2"
+export _a="3.3.3.3"
+export a_0="4.4.4.4"
+export A="$a"
+export A0="$a0"
+export _A="$_a"
+export A_0="$a_0"
+export __SOME_LONG_complicated_VAR_0_with_lots_Of_sTUff_going_on=hi`)
+	o = &Octopus{
+		remoteConnector: &remotetest.MockRemoteConnector{},
+		hostGroups:      []string{},
+		groupsFile:      groupFile,
+	}
+	groups, err = o.ValidHostGroups()
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, groups, []string{
+		"a",
+		"a0",
+		"_a",
+		"a_0",
+		"A",
+		"A0",
+		"_A",
+		"A_0",
+		"__SOME_LONG_complicated_VAR_0_with_lots_Of_sTUff_going_on",
+	})
+
+	createTestGroupFile(`
+export a="1.1.1.1"
+export 0a='will fail'
+export aaa="2.2.2."`)
+	groups, err = o.ValidHostGroups()
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, groups, []string{"a", "aaa"})
+
+	createTestGroupFile(`
+one="1.1.1.1"
+two="2.2.2.2"`)
+	o = &Octopus{
+		remoteConnector: &remotetest.MockRemoteConnector{},
+		hostGroups:      []string{},
+		groupsFile:      groupFile,
+	}
+	groups, err = o.ValidHostGroups()
+	assert.NoError(t, err)
+	assert.Empty(t, groups)
+}
+
+func BenchmarkOctopus_ValidHostGroups(b *testing.B) {
+	testRootDir, err := ioutil.TempDir("", "octopus-bench-valid-host-groups")
+	assert.NoError(b, err)
+	defer os.RemoveAll(testRootDir)
+
+	groupFile := path.Join(testRootDir, "_test-groups-file")
+	f, err := os.Create(groupFile)
+	assert.NoError(b, err)
+	f.WriteString(`
+export one="1.1.1.1"
+export two="2.2.2.2"
+export three="3.3.3.3"
+export first="$one"
+rest="$two"
+export rest="$rest $three"
+`)
+	f.Close()
+
+	for i := 0; i < b.N; i++ {
+		o := &Octopus{
+			remoteConnector: &remotetest.MockRemoteConnector{},
+			hostGroups:      []string{},
+			groupsFile:      groupFile,
+		}
+		o.ValidHostGroups()
+	}
+}
 
 // Octopus needs to:
 // 1. get addresses from the host groups file (can fail)

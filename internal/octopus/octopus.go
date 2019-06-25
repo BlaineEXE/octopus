@@ -4,7 +4,7 @@ package octopus
 
 import (
 	"fmt"
-	"os"
+	"sort"
 	"strings"
 
 	"github.com/BlaineEXE/octopus/internal/logger"
@@ -33,19 +33,15 @@ func New(c remote.Connector, hostGroups []string, groupsFile string) *Octopus {
 func (o *Octopus) ValidHostGroups() ([]string, error) {
 	logger.Info.Println("groups file: ", o.groupsFile)
 
-	f, err := os.Open(o.groupsFile)
-	if err != nil {
-		return []string{}, fmt.Errorf("could not load groups file: %+v", err)
-	}
-
-	g, err := getAllGroupsInFile(f)
+	g, err := getAllGroupsInFile(o.groupsFile)
 	if err != nil {
 		return []string{}, fmt.Errorf("failed to parse groups file. %+v", err)
 	}
-	gs := []string{}
+	gs := make([]string, 0, len(g))
 	for k := range g {
 		gs = append(gs, k)
 	}
+	sort.Strings(gs)
 	return gs, nil
 }
 

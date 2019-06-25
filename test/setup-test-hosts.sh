@@ -21,11 +21,11 @@ done
 cat << EOF > "$GROUPFILE"
 #!/usr/bin/env bash
 
-one='$one'
-rest='$rest'
+export one='$one'
+export rest='$rest'
 
 EOF
-echo 'all="$one $rest"' >> "$GROUPFILE"
+echo 'export all="$one $rest"' >> "$GROUPFILE"
 echo '' >> "$GROUPFILE"
 
 echo "  "$GROUPFILE" file:"
