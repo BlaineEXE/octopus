@@ -1,7 +1,15 @@
 # Examaple config.yaml file for octopus.
 # This example does not reflect octopus's default values.
 
+# global options
 groups-file: $HOME/host-groups.sh
 identity-file: ~/.ssh/id_dsa
+user: root
+port: 22
 host-groups: all
 verbose: false
+
+# 'copy' options
+recursive: true
+buffer-size: 128
+requests-per-file: 128
