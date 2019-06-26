@@ -84,18 +84,42 @@ __octopus_empty_completion()
 	COMPREPLY+=("" " ")
 }
 
-__octopus_current_flags()
+# taken from kubectl; override flags are flags that need to be present when running octopus to get
+# completion suggestions for other flags because they change the behavior of octopus.
+# specifically, groups-file changes the groups available to octopus for getting completion for the
+# host-groups flag
+__octopus_override_flag_list=(--groups-file -f)
+__octopus_override_flags()
 {
-	local flags
-	flags=(${words[@]:1}) # do not include 'octopus' cmd itself
-	unset -v 'flags[${#flags[@]}-1]'
-	echo "${flags[*]}"
+    local ${__octopus_override_flag_list[*]##*-} two_word_of of var
+    for w in "${words[@]}"; do
+        if [ -n "${two_word_of}" ]; then
+            eval "${two_word_of##*-}=\"${two_word_of}=\${w}\""
+            two_word_of=
+            continue
+        fi
+        for of in "${__octopus_override_flag_list[@]}"; do
+            case "${w}" in
+                ${of}=*)
+                    eval "${of##*-}=\"${w}\""
+                    ;;
+                ${of})
+                    two_word_of="${of}"
+                    ;;
+            esac
+        done
+    done
+    for var in "${__octopus_override_flag_list[@]##*-}"; do
+        if eval "test -n \"\$${var}\""; then
+            eval "echo \${${var}}"
+        fi
+    done
 }
 
 __octopus_get_host_groups()
 {
 	local out
-	if out=$(octopus $(__octopus_current_flags) host-groups); then
+	if out=$(octopus $(__octopus_override_flags) host-groups); then
 		if [[ -n "$out" ]]; then
 			COMPREPLY+=( $( compgen -W "${out[*]}" -- "$cur" ) )
 		else
