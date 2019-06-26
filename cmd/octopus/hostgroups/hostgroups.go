@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/BlaineEXE/octopus/internal/octopus"
 	"github.com/BlaineEXE/octopus/internal/util"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 const (

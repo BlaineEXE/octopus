@@ -3,9 +3,8 @@ package tentacle
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	remotetest "github.com/BlaineEXE/octopus/internal/remote/test"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCommandRunner(t *testing.T) {

@@ -6,11 +6,9 @@ import (
 	"path"
 	"testing"
 
-	"github.com/BlaineEXE/octopus/internal/util/testutil"
-
-	"github.com/stretchr/testify/assert"
-
 	remotetest "github.com/BlaineEXE/octopus/internal/remote/test"
+	"github.com/BlaineEXE/octopus/internal/util/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFileCopier(t *testing.T) {

@@ -5,9 +5,8 @@ package version
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
-
 	"github.com/BlaineEXE/octopus/internal/version"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -21,7 +20,7 @@ var VersionCmd = &cobra.Command{
 	Long:  fmt.Sprintf("\n%s", aboutText),
 	Args:  cobra.ExactArgs(0), // support no args to version
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Print(" octopus version ", version.Version)
+		fmt.Println(" octopus version ", version.Version)
 		return nil
 	},
 }

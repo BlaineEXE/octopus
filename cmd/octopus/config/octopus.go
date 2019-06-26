@@ -5,13 +5,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/spf13/viper"
-
 	"github.com/BlaineEXE/octopus/internal/logger"
 	"github.com/BlaineEXE/octopus/internal/octopus"
 	"github.com/BlaineEXE/octopus/internal/remote"
 	"github.com/BlaineEXE/octopus/internal/ssh"
 	"github.com/BlaineEXE/octopus/internal/util"
+	"github.com/spf13/viper"
 )
 
 var remoteConnector remote.Connector = ssh.NewConnector()
