@@ -4,15 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/BlaineEXE/octopus/internal/ssh"
-
-	"github.com/BlaineEXE/octopus/internal/tentacle"
-
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/BlaineEXE/octopus/cmd/octopus/config"
 	"github.com/BlaineEXE/octopus/internal/logger"
+	"github.com/BlaineEXE/octopus/internal/ssh"
+	"github.com/BlaineEXE/octopus/internal/tentacle"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // CopyCmd is the 'copy' command definition which copies local files to remote hosts.
@@ -67,9 +64,13 @@ var CopyCmd = &cobra.Command{
 
 func init() {
 	CopyCmd.Flags().BoolP("recursive", "r", false, "recurse into subdirectories and copy all files")
+
 	CopyCmd.Flags().Uint16P("buffer-size", "B", 32,
 		"(sftp) in kibibits (kib), maximum buffer (chunk) size for copying files")
+	config.SetCmdFlagCompletion(CopyCmd, "buffer-size", config.BashCompletionEmptyCompletionFunction)
+
 	CopyCmd.Flags().Uint16P("requests-per-file", "R", 64, "(sftp) max number of concurrent requests per file")
+	config.SetCmdFlagCompletion(CopyCmd, "requests-per-file", config.BashCompletionEmptyCompletionFunction)
 
 	viper.BindPFlags(CopyCmd.Flags())
 }

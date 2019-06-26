@@ -3,11 +3,10 @@ package config
 import (
 	"os"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/BlaineEXE/octopus/internal/logger"
 	"github.com/BlaineEXE/octopus/internal/version"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -58,10 +57,53 @@ var OctopusCmd = &cobra.Command{
 			logger.Info.Println("Octopus version:", version.Version)
 		}
 	},
+	BashCompletionFunction: bashCompletionFunc,
 }
 
-// octopusCmd can't reference itself to print usage when there is an input error
-var usageString string
+// SetCmdFlagCompletion sets a custom completion function for a flag.
+func SetCmdFlagCompletion(cmd *cobra.Command, flag, completionFunction string) {
+	if cmd.Flag(flag).Annotations == nil {
+		cmd.Flag(flag).Annotations = map[string][]string{}
+	}
+	f := cmd.Flag(flag)
+	f.Annotations[cobra.BashCompCustom] = append(
+		f.Annotations[cobra.BashCompCustom],
+		completionFunction,
+	)
+}
+
+// BashCompletionEmptyCompletionFunction is the name of the custom completion function which will
+// return empty completion for a flag. Use this when Bash's default behavior of suggesting files in
+// the current directory aren't useful for a flag.
+const BashCompletionEmptyCompletionFunction = "__octopus_empty_completion"
+
+const bashCompletionFunc = `
+__octopus_empty_completion()
+{
+	# suggest 2 different, empty completions to stop bash from returning default completions to user
+	COMPREPLY+=("" " ")
+}
+
+__octopus_current_flags()
+{
+	local flags
+	flags=(${words[@]:1}) # do not include 'octopus' cmd itself
+	unset -v 'flags[${#flags[@]}-1]'
+	echo "${flags[*]}"
+}
+
+__octopus_get_host_groups()
+{
+	local out
+	if out=$(octopus $(__octopus_current_flags) host-groups); then
+		if [[ -n "$out" ]]; then
+			COMPREPLY+=( $( compgen -W "${out[*]}" -- "$cur" ) )
+		else
+			__octopus_empty_completion
+		fi
+	fi
+}
+`
 
 func init() {
 	// Load the config file at cobra initialization
@@ -70,14 +112,22 @@ func init() {
 	// Persistent top-level flags
 	OctopusCmd.PersistentFlags().StringP("groups-file", "f", defaultGroupsFile,
 		"file which defines groups of remote hosts available for execution")
+
 	OctopusCmd.PersistentFlags().StringSliceP("host-groups", "g", []string{},
 		"comma-separated list of host groups; the command will be run on each host in every group")
+	SetCmdFlagCompletion(OctopusCmd, "host-groups", "__octopus_get_host_groups")
+
 	OctopusCmd.PersistentFlags().StringP("identity-file", "i", "$HOME/.ssh/id_rsa",
 		"(ssh) file from which the identity (private key) for public key authentication is read")
+
 	OctopusCmd.PersistentFlags().Uint16P("port", "p", 22,
 		"(ssh) port on which to connect to hosts")
+	SetCmdFlagCompletion(OctopusCmd, "port", BashCompletionEmptyCompletionFunction)
+
 	OctopusCmd.PersistentFlags().StringP("user", "u", "root",
 		"user as which to connect to hosts (corresponds to ssh \"-l\" option)")
+	SetCmdFlagCompletion(OctopusCmd, "user", BashCompletionEmptyCompletionFunction)
+
 	OctopusCmd.PersistentFlags().BoolP("verbose", "v", false,
 		"print additional information about octopus progress")
 

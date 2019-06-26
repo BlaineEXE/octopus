@@ -5,16 +5,14 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/BlaineEXE/octopus/cmd/octopus/config"
-	_ "github.com/BlaineEXE/octopus/cmd/octopus/root"
+	_ "github.com/BlaineEXE/octopus/cmd/octopus/root" // do the root init for CLI/config
 )
 
 func main() {
 	if err := config.OctopusCmd.Execute(); err != nil {
 		log.Fatalf("%+v", err)
 	}
-	fmt.Println("")
 }
