@@ -46,3 +46,7 @@ for host in $HOSTNAMES; do # command failure should still report hostnames
   assert_output_count "$host" 1
 done
 octopus -g one run "mv ${ls_location}.bkp ${ls_location}" 1> /dev/null
+
+
+assert_success 'with group having no members' octopus -g empty run 'hostname'
+assert_num_output_lines_with_text 0

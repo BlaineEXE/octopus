@@ -77,6 +77,7 @@ echo "Running 'octopus host-groups' tests ..."
 assert_success "with default groups" octopus host-groups
 assert_output_count "one" 1
 assert_output_count "rest" 1
+assert_output_count "empty" 1
 
 # create custom, more complex group file for this test
 mkdir -p "$HOME/work"
