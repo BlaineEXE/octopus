@@ -32,13 +32,11 @@ var getAddrsFromGroupsFile = func(hostGroups []string, groupsFile string) ([]str
 	cmd := exec.Command("bash", "-ec",
 		fmt.Sprintf("source %s ; echo %s", groupsFile, strings.Join(gVars, " ")))
 	o, err := cmd.CombinedOutput()
-	// convert to string which has exactly one newline
-	os := strings.TrimRight(string(o), "\n")
 	if err != nil {
-		return []string{}, fmt.Errorf("could not get groups %+v from %s: %+v\n%s", hostGroups, groupsFile, err, os)
+		return []string{}, fmt.Errorf("could not get groups %+v from %s: %+v\n%s", hostGroups, groupsFile, err, string(o))
 	}
 
-	addrs := strings.Split(os, " ")
+	addrs := strings.Fields(string(o))
 	return addrs, nil
 }
 

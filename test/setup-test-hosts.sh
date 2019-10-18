@@ -23,6 +23,7 @@ cat << EOF > "$GROUPFILE"
 
 export one='$one'
 export rest='$rest'
+export empty=''
 
 EOF
 echo 'export all="$one $rest"' >> "$GROUPFILE"
